@@ -1,4 +1,4 @@
-#  [![Build Status](https://secure.travis-ci.org/identifi/identifi-cli.png?branch=master)](http://travis-ci.org/mmalmi/identifi-cli)
+#  [![Build Status](https://secure.travis-ci.org/identifi/identifi-cli.png?branch=master)](http://travis-ci.org/identifi/identifi-cli)
 
 > Command line interface for Identifi
 
