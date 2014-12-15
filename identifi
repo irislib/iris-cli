@@ -1,0 +1,66 @@
+#!/usr/bin/env node
+'use strict';
+var identifi = require('commander');
+var api = require('identifi-lib');
+
+identifi
+  .version('0.0.1')
+  .option('-vt, --viewpoint-type [type]', 'Set trust viewpoint type')
+  .option('-vv, --viewpoint-value [value]', 'Set trust viewpoint value')
+  .option('-d, --max-distance [distance]', 'Maximum trust distance from viewpoint')
+  .option('-l, --limit [limit]', 'Limit the amount of results')
+  .option('-o, --offset [offset]', 'Offset of results list');
+
+identifi
+  .command('search <idValue>')
+  .action(function(query) {
+    api
+      .search(query)
+      .then(function(res) {
+        console.log(res);
+      });
+  });
+
+identifi
+  .command('overview <idType> <idValue>')
+  .action(function(type, value) {
+    api
+      .get_overview(value, type)
+      .then(function(res) {
+        console.log(res);
+      });
+  });
+
+identifi
+  .command('received <idType> <idValue>')
+  .action(function(type, value) {
+    api
+      .get_received(value, type)
+      .then(function(res) {
+        console.log(res);
+      });
+  });
+  
+identifi
+  .command('sent <idType> <idValue>')
+  .action(function(type, value) {
+    api
+      .get_sent(value, type)
+      .then(function(res) {
+        console.log(res);
+      });
+  });
+
+identifi
+  .command('identity <idType> <idValue>')
+  .action(function(type, value) {
+    api
+      .get_connections(value, type)
+      .then(function(res) {
+        console.log(res);
+      });
+  });
+
+module.exports = identifi; 
+
+identifi.parse(process.argv);

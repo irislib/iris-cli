@@ -1,0 +1,45 @@
+{
+  "name": "identifi-cli",
+  "version": "0.0.1",
+  "description": "Command line interface for Identifi",
+  "homepage": "https://github.com/identifi/identifi-cli",
+  "author": {
+    "name": "Martti Malmi",
+    "email": "martti.malmi@iki.fi",
+    "url": "https://github.com/mmalmi"
+  },
+  "repository": "identifi/identifi-cli",
+  "license": "MIT",
+  "files": [
+    "identifi"
+  ],
+  "keywords": [
+    "identifi-cli",
+    "identifi",
+    "identity",
+    "trust",
+    "web of trust",
+    "rating",
+    "reputation"
+  ],
+  "dependencies": {
+    "commander": "^2.5.0",
+    "identifi-lib": "^0.0.3"
+  },
+  "devDependencies": {
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-contrib-nodeunit": "^0.4.1",
+    "grunt-contrib-watch": "^0.6.1",
+    "load-grunt-tasks": "^1.0.0",
+    "time-grunt": "^1.0.0",
+    "grunt-mocha-cli": "^1.11.0",
+    "jshint-stylish": "^1.0.0"
+  },
+  "scripts": {
+    "test": "grunt"
+  },
+  "bin": {
+    "identifi": "identifi"
+  }
+}
