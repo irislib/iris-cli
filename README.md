@@ -12,15 +12,9 @@ $ npm install --save identifi-cli
 
 ## Usage
 
-```js
-var identifi-cli = require('identifi-cli');
-
-identifi-cli('Rainbow');
-```
-
 ```sh
 $ npm install --global identifi-cli
-$ identifi-cli --help
+$ identifi --help
 ```
 
 
