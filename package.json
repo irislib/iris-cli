@@ -24,7 +24,7 @@
   ],
   "dependencies": {
     "commander": "^2.5.0",
-    "identifi-lib": "^0.0.3"
+    "identifi-lib": "^0.0.4"
   },
   "devDependencies": {
     "grunt-cli": "^0.1.13",
