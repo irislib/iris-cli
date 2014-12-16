@@ -25,7 +25,7 @@ identifi
   .command('overview <idType> <idValue>')
   .action(function(type, value) {
     api
-      .get_overview(value, type)
+      .get_overview(type, value)
       .then(function(res) {
         console.log(res);
       });
@@ -35,7 +35,7 @@ identifi
   .command('received <idType> <idValue>')
   .action(function(type, value) {
     api
-      .get_received(value, type)
+      .get_received(type, value)
       .then(function(res) {
         console.log(res);
       });
@@ -45,7 +45,7 @@ identifi
   .command('sent <idType> <idValue>')
   .action(function(type, value) {
     api
-      .get_sent(value, type)
+      .get_sent(type, value)
       .then(function(res) {
         console.log(res);
       });
@@ -55,7 +55,7 @@ identifi
   .command('identity <idType> <idValue>')
   .action(function(type, value) {
     api
-      .get_connections(value, type)
+      .get_connections(type, value)
       .then(function(res) {
         console.log(res);
       });
