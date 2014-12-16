@@ -23,6 +23,7 @@
     "reputation"
   ],
   "dependencies": {
+    "chai": "^1.10.0",
     "commander": "^2.5.0",
     "identifi-lib": "^0.0.4"
   },

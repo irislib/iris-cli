@@ -1,11 +1,14 @@
+/*jshint unused:false*/
+/*jshint -W030 */
 /*global describe, it */
 'use strict';
+var chai = require('chai');
+chai.should();
 
-var assert = require('assert');
 var identifi = require('../identifi');
 
 describe('identifi-cli node module', function () {
     it('Should have the search method', function () {
-        assert(identifi.commands[0]._name === 'search');
+        identifi.commands[0]._name.should.equal('search');
     });
 });

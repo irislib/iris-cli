@@ -9,13 +9,22 @@ identifi
   .option('-vv, --viewpoint-value [value]', 'Set trust viewpoint value')
   .option('-d, --max-distance [distance]', 'Maximum trust distance from viewpoint')
   .option('-l, --limit [limit]', 'Limit the amount of results')
-  .option('-o, --offset [offset]', 'Offset of results list');
+  .option('-o, --offset [offset]', 'Offset of results list')
+  .parse(process.argv);
+
+var options = {
+  viewpointType: identifi.viewpointType,
+  viewpointValue: identifi.viewpointValue,
+  maxDistance: identifi.maxDistance,
+  limit: identifi.limit || 10,
+  offset: identifi.offset || 0
+};
 
 identifi
   .command('search <idValue>')
   .action(function(query) {
     api
-      .search(query)
+      .search(query, options)
       .then(function(res) {
         console.log(res);
       });
@@ -23,7 +32,7 @@ identifi
 
 identifi
   .command('overview <idType> <idValue>')
-  .action(function(type, value) {
+  .action(function(type, value, options) {
     api
       .get_overview(type, value)
       .then(function(res) {
@@ -33,7 +42,7 @@ identifi
 
 identifi
   .command('received <idType> <idValue>')
-  .action(function(type, value) {
+  .action(function(type, value, options) {
     api
       .get_received(type, value)
       .then(function(res) {
@@ -43,7 +52,7 @@ identifi
   
 identifi
   .command('sent <idType> <idValue>')
-  .action(function(type, value) {
+  .action(function(type, value, options) {
     api
       .get_sent(type, value)
       .then(function(res) {
@@ -53,7 +62,7 @@ identifi
 
 identifi
   .command('identity <idType> <idValue>')
-  .action(function(type, value) {
+  .action(function(type, value, options) {
     api
       .get_connections(type, value)
       .then(function(res) {
