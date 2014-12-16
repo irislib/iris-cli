@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 'use strict';
+var packageJson = require('./package.json');
 var identifi = require('commander');
 var api = require('identifi-lib');
 
 identifi
-  .version('0.0.1')
+  .version(packageJson.version)
   .option('-vt, --viewpoint-type [type]', 'Set trust viewpoint type')
   .option('-vv, --viewpoint-value [value]', 'Set trust viewpoint value')
   .option('-d, --max-distance [distance]', 'Maximum trust distance from viewpoint')
