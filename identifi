@@ -10,8 +10,7 @@ identifi
   .option('-vv, --viewpoint-value [value]', 'Set trust viewpoint value')
   .option('-d, --max-distance [distance]', 'Maximum trust distance from viewpoint')
   .option('-l, --limit [limit]', 'Limit the amount of results')
-  .option('-o, --offset [offset]', 'Offset of results list')
-  .parse(process.argv);
+  .option('-o, --offset [offset]', 'Offset of results list');
 
 var options = {
   viewpointType: identifi.viewpointType,
@@ -23,54 +22,53 @@ var options = {
 
 identifi
   .command('search <idValue>')
+  .description('Search for an identity')
   .action(function(query) {
     api
       .search(query, options)
-      .then(function(res) {
-        console.log(res);
-      });
+      .then(console.log, console.log);
   });
 
 identifi
   .command('overview <idType> <idValue>')
+  .description('Get an overview of an identity')
   .action(function(type, value, options) {
     api
       .get_overview(type, value)
-      .then(function(res) {
-        console.log(res);
-      });
+      .then(console.log, console.log);
   });
 
 identifi
   .command('received <idType> <idValue>')
+  .description('Get the messages received by an identity')
   .action(function(type, value, options) {
     api
       .get_received(type, value)
-      .then(function(res) {
-        console.log(res);
-      });
+      .then(console.log, console.log);
   });
   
 identifi
   .command('sent <idType> <idValue>')
+  .description('Get the messages sent by an identity')
   .action(function(type, value, options) {
     api
       .get_sent(type, value)
-      .then(function(res) {
-        console.log(res);
-      });
+      .then(console.log, console.log);
   });
 
 identifi
   .command('identity <idType> <idValue>')
+  .description('Get the identifiers belonging to an identity')
   .action(function(type, value, options) {
     api
       .get_connections(type, value)
-      .then(function(res) {
-        console.log(res);
-      });
+      .then(console.log, console.log);
   });
 
-module.exports = identifi; 
-
 identifi.parse(process.argv);
+
+module.exports = identifi;
+
+if (!process.argv.slice(2).length) {
+  identifi.outputHelp();
+}

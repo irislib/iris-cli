@@ -1,6 +1,6 @@
 {
   "name": "identifi-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Command line interface for Identifi",
   "homepage": "https://github.com/identifi/identifi-cli",
   "author": {
@@ -23,20 +23,20 @@
     "reputation"
   ],
   "dependencies": {
-    "chai": "^1.10.0",
-    "commander": "^2.5.0",
+    "chai": "^2.3.0",
+    "commander": "^2.8.1",
     "identifi-lib": "^0.0.4"
   },
   "devDependencies": {
     "grunt-cli": "^0.1.13",
-    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-contrib-jshint": "^0.11.2",
     "grunt-contrib-nodeunit": "^0.4.1",
     "grunt-contrib-watch": "^0.6.1",
-    "load-grunt-tasks": "^1.0.0",
-    "time-grunt": "^1.0.0",
-    "grunt-mocha-cli": "^1.11.0",
-    "grunt-release": "^0.9.0",
-    "jshint-stylish": "^1.0.0"
+    "load-grunt-tasks": "^3.1.0",
+    "time-grunt": "^1.2.0",
+    "grunt-mocha-cli": "^1.13.0",
+    "grunt-release": "^0.12.0",
+    "jshint-stylish": "^1.0.2"
   },
   "scripts": {
     "test": "grunt"
