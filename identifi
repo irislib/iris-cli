@@ -2,10 +2,24 @@
 'use strict';
 var packageJson = require('./package.json');
 var identifi = require('commander');
-var api = require('identifi-lib');
+var identifi_lib = require('identifi-lib');
+var api = identifi_lib.client
+var message = identifi_lib.message
 
 identifi
   .version(packageJson.version)
+  .usage('<identifier> [options]')
+  .option('-t, --type [type]', 'Force set the identifier type')
+  .option('-g, --get [type]', 'Get a connected identifier of the given type')
+  .option('-r, --received', 'Get messages received by the identity')
+  .option('-s, --sent', 'Get messages sent by the identity')
+  .option('--rate [rating]', 'Give a rating between -10 and 10 to the identity')
+  .option('--connect [identifier]', 'Connect an identifier to the identity')
+  .option('--disconnect [identifier]', 'Disconnect an identifier from the identity')
+  .option('-m --message [message]', 'Include a comment with a rating / connection')
+  .option('--trustpath', 'Get a trust path to the identity')
+  .option('--status', 'Get node status')
+  .option('--stop', 'Shut down the identifi node')
   .option('-vt, --viewpoint-type [type]', 'Set trust viewpoint type')
   .option('-vv, --viewpoint-value [value]', 'Set trust viewpoint value')
   .option('-d, --max-distance [distance]', 'Maximum trust distance from viewpoint')
@@ -20,55 +34,156 @@ var options = {
   offset: identifi.offset || 0
 };
 
-identifi
-  .command('search <idValue>')
-  .description('Search for an identity')
-  .action(function(query) {
-    api
-      .search(query, options)
-      .then(console.log, console.log);
-  });
-
-identifi
-  .command('overview <idType> <idValue>')
-  .description('Get an overview of an identity')
-  .action(function(type, value, options) {
-    api
-      .get_overview(type, value)
-      .then(console.log, console.log);
-  });
-
-identifi
-  .command('received <idType> <idValue>')
-  .description('Get the messages received by an identity')
-  .action(function(type, value, options) {
-    api
-      .get_received(type, value)
-      .then(console.log, console.log);
-  });
-  
-identifi
-  .command('sent <idType> <idValue>')
-  .description('Get the messages sent by an identity')
-  .action(function(type, value, options) {
-    api
-      .get_sent(type, value)
-      .then(console.log, console.log);
-  });
-
-identifi
-  .command('identity <idType> <idValue>')
-  .description('Get the identifiers belonging to an identity')
-  .action(function(type, value, options) {
-    api
-      .get_connections(type, value)
-      .then(console.log, console.log);
-  });
-
 identifi.parse(process.argv);
-
-module.exports = identifi;
 
 if (!process.argv.slice(2).length) {
   identifi.outputHelp();
 }
+
+// Set user identity placeholder
+var myIdType = 'email';
+var myIdValue = 'alice@example.com';
+var myId = [myIdType, myIdValue];
+var myPrivateKey = '-----BEGIN EC PRIVATE KEY-----\n' + 'MHQCAQEEINY+49rac3jkC+S46XN0f411svOveILjev4R3aBehwUKoAcGBSuBBAAK\n' + 'oUQDQgAEKn3lQ3+/aN6xNd9DSFrYbaPSGOzLMbb1kQZ9lCMtwc6Og4hfCMLhaSbE\n' + '3sXek8e2fvKrTp8FY1MyCL4qMeVviA==\n' + '-----END EC PRIVATE KEY-----';
+var myKeyId = '12345';
+
+// Process identifier param
+var idValue = identifi.args[0];
+var idType;
+if (identifi.type) {
+  idType = identifi.type;
+} else if (idValue) {
+  idType = identifi_lib.guessTypeOf(idValue);
+}
+idType = idType || 'name';
+var identifier = [idType, idValue];
+
+function showError(error) {
+  console.log('Identifi request failed: ');
+  console.log(error.options.uri);
+  if (error.response) {
+    console.log(error.statusCode, error.response.statusMessage);
+  } else {
+    console.log(error);
+  }
+
+}
+
+(function run() {
+  if (idValue) {
+    console.log(idType + ': ' + idValue);
+
+    if (identifi.get) {
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: idType,
+        apiId: idValue,
+        apiAction: 'connections',
+        qs: { type: identifi.get }
+      }).then(function(res) {
+        console.log('Related ' + identifi.get + ':');
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.received) {
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: idType,
+        apiId: idValue,
+        apiAction: 'received'
+      }).then(function(res) {
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.sent) {
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: idType,
+        apiId: idValue,
+        apiAction: 'sent'
+      }).then(function(res) {
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.trustpath) {
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: myIdType,
+        apiId: myIdValue,
+        apiAction: 'trustpaths',
+        qs: { target_type: idType, target_value: idValue }
+      }).then(function(res) {
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.rate) {
+      var data = {
+        author: [myId],
+        recipient: [[idType, idValue]],
+        rating: identifi.rate
+      };
+      if (identifi.message) { data['comment'] = identifi.message; }
+      var m = message.createRating(data);
+      message.sign(m, myPrivateKey, myKeyId);
+      return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+        console.log('Rating saved:');
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.connect) {
+      var data = {
+        author: [myId],
+        recipient: [[idType, idValue]],
+        type: 'confirm_connection'
+      };
+      if (identifi.message) { data['comment'] = identifi.message; }
+      var m = message.create(data);
+      message.sign(m, myPrivateKey, myKeyId);
+      return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+        console.log('Connection saved:');
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.disconnect) {
+      var data = {
+        author: [myId],
+        recipient: [[idType, idValue]],
+        type: 'refute_connection'
+      };
+      if (identifi.message) { data['comment'] = identifi.message; }
+      var m = message.create(data);
+      message.sign(m, myPrivateKey, myKeyId);
+      return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+        console.log('Disconnection saved:');
+        console.log(res);
+      }).catch(showError);
+    }
+
+    // Return overview by default
+    return api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'overview' })
+    .then(function(res) {
+      console.log('Overview:');
+      console.log(res);
+    }).catch(showError);
+  }
+
+  if (identifi.status) {
+    return api.request({ apiMethod: 'status' }).then(function(res) {
+      console.log(res);
+    }).catch(showError);
+  }
+
+  if (identifi.stop) {
+    return api.request({ apiMethod: 'stop' }).then(function(res) {
+      console.log(res);
+    }).catch(showError);
+  }
+})();
+
+module.exports = identifi;
