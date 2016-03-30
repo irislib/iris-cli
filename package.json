@@ -24,6 +24,7 @@
   ],
   "dependencies": {
     "chai": "^2.3.0",
+    "colors": "^1.1.2",
     "commander": "^2.8.1",
     "identifi-lib": "^0.0.5"
   },
