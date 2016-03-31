@@ -11,23 +11,23 @@ identifi
   .version(packageJson.version)
   .usage('<identifier> [options]')
   .option('-t, --type <type>', 'Force set the identifier type')
-  .option('-g, --get [type]', 'Get a connected identifier of the given type')
-  .option('-r, --received', 'Get messages received by the identity')
-  .option('-s, --sent', 'Get messages sent by the identity')
+  .option('-g, --get <type>', 'Get a connected identifier of the given type')
+  .option('-r, --received [ratingType]', 'Get received positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
+  .option('-s, --sent [ratingType]', 'Get sent positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
   .option('--rate <rating>', 'Give a rating between -10 and 10 to the identity')
   // .option('--name [name]', 'Name an identity') reserved word by commander
-  .option('--connect [identifier]', 'Connect an identifier to the identity')
-  .option('--disconnect [identifier]', 'Disconnect an identifier from the identity')
-  .option('-m --message [message]', 'Include a comment with a rating / connection')
+  .option('--connect <identifier>', 'Connect an identifier to the identity')
+  .option('--disconnect <identifier>', 'Disconnect an identifier from the identity')
+  .option('-m --message <message>', 'Include a comment with a rating / connection')
   .option('--trustpath', 'Get a trust path to the identity')
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
   .option('--whoami', 'Overview of your own identity')
-  .option('-vt, --viewpoint-type [type]', 'Set trust viewpoint type')
-  .option('-vv, --viewpoint-value [value]', 'Set trust viewpoint value')
-  .option('-d, --max-distance [distance]', 'Maximum trust distance from viewpoint')
-  .option('-l, --limit [limit]', 'Limit the amount of results')
-  .option('-o, --offset [offset]', 'Offset of results list');
+  .option('-vt, --viewpoint-type <type>', 'Set trust viewpoint type')
+  .option('-vv, --viewpoint-value <value>', 'Set trust viewpoint value')
+  .option('-d, --max-distance <distance>', 'Maximum trust distance from viewpoint', parseInt)
+  .option('-l, --limit <limit>', 'Limit the amount of results', parseInt)
+  .option('-o, --offset <offset>', 'Offset of results list', parseInt);
 
 var options = {
   viewpointType: identifi.viewpointType,
@@ -87,6 +87,51 @@ function showTypeIfGuessed() {
   }
 }
 
+function printMessages(messages, showSender, showRecipient) {
+  if (messages.length === 0) {
+    console.log('No messages');
+  }
+  for (var i = 0; i < messages.length; i++) {
+    var str, type,
+      m = messages[i];
+    message.decode(m);
+    var d = m.signedData;
+
+    type = d.type;
+    if (d.type === 'rating') {
+      d.rating = parseInt(d.rating);
+      d.maxRating = parseInt(d.maxRating);
+      d.minRating = parseInt(d.minRating);
+      type = type + ' ' + d.rating;
+      if (d.rating > (d.maxRating + d.minRating) / 2) {
+        type = type.green;
+      } else if (d.rating < (d.maxRating + d.minRating) / 2) {
+        type = type.red;
+      } else {
+        type = type.yellow;
+      }
+      type = type + (' (' + d.minRating + '..' + d.maxRating + ')').gray;
+    }
+    if (showSender) {
+      str = 'from '.gray + d.author[0][0] + ':' + d.author[0][1] + ': ';
+      str = str + type;
+    }
+    if (showRecipient) {
+      str = 'to '.gray + d.recipient[0][0] + ':' + d.recipient[0][1] + ': ';
+      str = str + type;
+    }
+
+    if (d.comment) {
+      str = str + ' ' + d.comment.substring(0, 50);
+      if (d.comment.length > 50) {
+        str = str + '...';
+      }
+    }
+
+    console.log(str);
+  }
+}
+
 function run() {
   if (identifi.get) {
     return api.request({
@@ -103,26 +148,36 @@ function run() {
   }
 
   if (identifi.received) {
+    var qs = {};
+    if (identifi.received.length > 0 && identifi.received !== 'all') {
+      qs.type = 'rating:' + identifi.received;
+    }
     return api.request({
       apiMethod: 'id',
       apiIdType: idType,
       apiId: idValue,
-      apiAction: 'received'
+      apiAction: 'received',
+      qs: qs
     }).then(function(res) {
       showTypeIfGuessed();
-      console.log(res);
+      printMessages(res, true, false);
     }).catch(showError);
   }
 
   if (identifi.sent) {
+    var qs = {};
+    if (identifi.sent.length > 0 && identifi.received !== 'all') {
+      qs.type = 'rating:' + identifi.sent;
+    }
     return api.request({
       apiMethod: 'id',
       apiIdType: idType,
       apiId: idValue,
-      apiAction: 'sent'
+      apiAction: 'sent',
+      qs: qs
     }).then(function(res) {
       showTypeIfGuessed();
-      console.log(res);
+      printMessages(res, false, true);
     }).catch(showError);
   }
 
@@ -234,8 +289,8 @@ function run() {
       .then(function(res) {
         var s = res[0];
         try {
-          console.log('Sent:     ' + (s.sentPositive + ' positive, ').green + (s.sentNeutral + ' neutral, ').yellow + (s.sentNegative + ' negative').red);
-          console.log('Received: ' + (s.receivedPositive + ' positive, ').green + (s.receivedNeutral + ' neutral, ').yellow + (s.receivedNegative + ' negative').red);
+          console.log('Sent:     ' + (s.sentPositive + ' positive ').green + (s.sentNeutral + ' neutral ').yellow + (s.sentNegative + ' negative').red);
+          console.log('Received: ' + (s.receivedPositive + ' positive ').green + (s.receivedNeutral + ' neutral ').yellow + (s.receivedNegative + ' negative').red);
           console.log('First seen: ' + s.firstSeen);
         } catch (err) {
           console.log(res);
