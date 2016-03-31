@@ -3,9 +3,11 @@
 var packageJson = require('./package.json');
 var identifi = require('commander');
 var identifi_lib = require('identifi-lib');
-var colors = require('colors');
 var api = identifi_lib.client
 var message = identifi_lib.message
+var colors = require('colors');
+var moment = require('moment');
+var emoji = require('node-emoji');
 
 identifi
   .version(packageJson.version)
@@ -92,43 +94,72 @@ function printMessages(messages, showSender, showRecipient) {
     console.log('No messages');
   }
   for (var i = 0; i < messages.length; i++) {
-    var str, type,
+    var str = '', type,
       m = messages[i];
     message.decode(m);
     var d = m.signedData;
 
-    type = d.type;
+    type = d.type + ' ';
     if (d.type === 'rating') {
-      d.rating = parseInt(d.rating);
+      type = '';
+
+      var iconStyle, iconCount = 1;
+      var rating = parseInt(d.rating);
       d.maxRating = parseInt(d.maxRating);
       d.minRating = parseInt(d.minRating);
-      type = type + ' ' + d.rating;
-      if (d.rating > (d.maxRating + d.minRating) / 2) {
-        type = type.green;
-      } else if (d.rating < (d.maxRating + d.minRating) / 2) {
-        type = type.red;
+      var neutralRating = (d.minRating + d.maxRating) / 2;
+      var maxRatingDiff = (d.maxRating - neutralRating);
+      var minRatingDiff = (d.minRating - neutralRating);
+      if (rating > neutralRating) {
+        iconStyle = ':thumbsup: ';
+        iconCount = (maxRatingDiff < 2) ? iconCount : Math.ceil(3 * rating / maxRatingDiff);
+        //alpha = (rating - neutralRating - 0.5) / maxRatingDiff / 1.25 + 0.2;
+        //msg.bgColor = 'background-image:linear-gradient(rgba(223,240,216,'+alpha+') 0%, rgba(208,233,198,'+alpha+') 100%);background-color: rgba(223,240,216,'+alpha+');';
+      } else if (rating < neutralRating) {
+        iconStyle = ':thumbsdown: ';
+        iconCount = (minRatingDiff > -2) ? iconCount : Math.ceil(3 * rating / minRatingDiff);
+        //alpha = (rating - neutralRating + 0.5) / minRatingDiff / 1.25 + 0.2;
+        //msg.bgColor = 'background-image:linear-gradient(rgba(242,222,222,'+alpha+') 0%, rgba(235,204,204,'+alpha+') 100%);background-color: rgba(242,222,222,'+alpha+');';
       } else {
-        type = type.yellow;
+        iconStyle = ':question: ';
       }
-      type = type + (' (' + d.minRating + '..' + d.maxRating + ')').gray;
-    }
-    if (showSender) {
-      str = 'from '.gray + d.author[0][0] + ':' + d.author[0][1] + ': ';
-      str = str + type;
-    }
-    if (showRecipient) {
-      str = 'to '.gray + d.recipient[0][0] + ':' + d.recipient[0][1] + ': ';
-      str = str + type;
+
+      for (var j = 0; j < iconCount; j++) {
+        type += iconStyle;
+      }
+      type = emoji.emojify(type) + ' ';
     }
 
+    if (d.type === 'confirm_connection') {
+      type = d.recipient[0][0] + ':' + d.recipient[0][1] + ' :white_check_mark: :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + ' ';
+    }
+    if (d.type === 'refute_connection') {
+      type = 'refute '.red + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :negative_squared_cross_mark: :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + ' ';
+    }
+    str = str + type;
+
     if (d.comment) {
-      str = str + ' ' + d.comment.substring(0, 50);
+      str = str + '"' + d.comment.substring(0, 50);
       if (d.comment.length > 50) {
         str = str + '...';
       }
+      str = str + '" ';
     }
 
-    console.log(str);
+    if (showSender) {
+      str += 'by '.gray;
+      if (d.author[0][0] !== 'email') {
+        str += d.author[0][0] + ':';
+      }
+      str += d.author[0][1] + ' ';
+    }
+    if (showRecipient) {
+      str = str + 'to '.gray + d.recipient[0][0] + ':' + d.recipient[0][1] + ' ';
+    }
+
+    str = str + moment(d.timestamp).calendar().gray + ' ';
+
+    console.log(emoji.emojify(str));
   }
 }
 
@@ -289,9 +320,9 @@ function run() {
       .then(function(res) {
         var s = res[0];
         try {
-          console.log('Sent:     ' + (s.sentPositive + ' positive ').green + (s.sentNeutral + ' neutral ').yellow + (s.sentNegative + ' negative').red);
-          console.log('Received: ' + (s.receivedPositive + ' positive ').green + (s.receivedNeutral + ' neutral ').yellow + (s.receivedNegative + ' negative').red);
-          console.log('First seen: ' + s.firstSeen);
+          console.log('Sent:     ' + colors.green(s.sentPositive) + ' positive ' + colors.yellow(s.sentNeutral) + ' neutral ' + colors.red(s.sentNegative) + ' negative');
+          console.log('Received: ' + colors.green(s.receivedPositive) + ' positive ' + colors.yellow(s.receivedNeutral) + ' neutral ' + colors.red(s.receivedNegative) + ' negative');
+          console.log('First seen: ' + moment(s.firstSeen).calendar());
         } catch (err) {
           console.log(res);
         }
