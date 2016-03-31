@@ -258,7 +258,7 @@ function run() {
   }
 
   if (identifi.rate) {
-    if (!parseInt(identifi.rate)) {
+    if (parseInt(identifi.rate) === NaN) {
       return identifi.outputHelp();
     }
     var data = {
