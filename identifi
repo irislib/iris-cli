@@ -86,6 +86,31 @@ function showError(error) {
 function showTypeIfGuessed() {
   if (!identifi.type) {
     console.log(idType + ': ' + idValue);
+    console.log();
+  }
+}
+
+function printTrustpaths(res) {
+  if (res.length === 0) {
+    return console.log('No trust path to ' + idType + ':' + idValue + ' found')
+  }
+  // Format a trustpath string
+  for (var i = 0; i < res.length; i++) {
+    var tp = res[i];
+    if (res[i].path_string) {
+      var arr = res[i].path_string.split(':');
+      tp = res.length > 1 ? i + ': ' : '';
+      for (var j = 0; j < arr.length; j++) {
+        if (j % 2 === 1) {
+          tp = tp + arr[j-1] + ':' + arr[j];
+          if (j < arr.length - 2) {
+            tp = tp + ' :thumbsup:  ';
+          }
+        }
+      }
+    }
+    console.log('Trust path:')
+    console.log(emoji.emojify(tp));
   }
 }
 
@@ -94,6 +119,7 @@ function printMessages(messages, showSender, showRecipient) {
     console.log('No messages');
   }
   for (var i = 0; i < messages.length; i++) {
+    var showThisRecipient = showRecipient, showThisSender = showSender;
     var str = '', type,
       m = messages[i];
     message.decode(m);
@@ -127,14 +153,16 @@ function printMessages(messages, showSender, showRecipient) {
       for (var j = 0; j < iconCount; j++) {
         type += iconStyle;
       }
-      type = emoji.emojify(type) + ' ';
+      type += ' ';
     }
 
     if (d.type === 'confirm_connection') {
-      type = d.recipient[0][0] + ':' + d.recipient[0][1] + ' :white_check_mark: :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + ' ';
+      type = ':white_check_mark:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
+      showThisRecipient = false;
     }
     if (d.type === 'refute_connection') {
-      type = 'refute '.red + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :negative_squared_cross_mark: :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + ' ';
+      type = ':x:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
+      showThisRecipient = false;
     }
     str = str + type;
 
@@ -146,14 +174,14 @@ function printMessages(messages, showSender, showRecipient) {
       str = str + '" ';
     }
 
-    if (showSender) {
+    if (showThisSender) {
       str += 'by '.gray;
       if (d.author[0][0] !== 'email') {
         str += d.author[0][0] + ':';
       }
       str += d.author[0][1] + ' ';
     }
-    if (showRecipient) {
+    if (showThisRecipient) {
       str = str + 'to '.gray + d.recipient[0][0] + ':' + d.recipient[0][1] + ' ';
     }
 
@@ -161,6 +189,7 @@ function printMessages(messages, showSender, showRecipient) {
 
     console.log(emoji.emojify(str));
   }
+  console.log();
 }
 
 function run() {
@@ -173,8 +202,12 @@ function run() {
       qs: { type: identifi.get }
     }).then(function(res) {
       showTypeIfGuessed();
-      console.log('Related ' + identifi.get + ':');
-      console.log(res);
+      if (res.length === 0) {
+        console.log(identifi.get + ' not found');
+      } else {
+        console.log('Related ' + identifi.get + ':');
+        console.log(res);
+      }
     }).catch(showError);
   }
 
@@ -220,26 +253,7 @@ function run() {
       apiAction: 'trustpaths',
       qs: { target_type: idType, target_value: idValue }
     }).then(function(res) {
-      if (res.length === 0) {
-        console.log('No trust path to ' + idType + ':' + idValue + ' found')
-      }
-      // Format a trustpath string
-      for (var i = 0; i < res.length; i++) {
-        var tp = res[i];
-        if (res[i].path_string) {
-          var arr = res[i].path_string.split(':');
-          tp = res.length > 1 ? i + ': ' : '';
-          for (var j = 0; j < arr.length; j++) {
-            if (j % 2 === 1) {
-              tp = tp + arr[j-1] + ':' + arr[j];
-              if (j < arr.length - 2) {
-                tp = tp + ' -> ';
-              }
-            }
-          }
-        }
-        console.log(tp);
-      }
+      printTrustpaths(res);
     }).catch(showError);
   }
 
@@ -247,7 +261,6 @@ function run() {
     if (!parseInt(identifi.rate)) {
       return identifi.outputHelp();
     }
-    showTypeIfGuessed();
     var data = {
       author: [myId],
       recipient: [[idType, idValue]],
@@ -257,8 +270,7 @@ function run() {
     var m = message.createRating(data);
     message.sign(m, myPrivateKey, myKeyId);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-      console.log('Rating saved:');
-      console.log(res);
+      printMessages([res], false, true);
     }).catch(showError);
   }
 
@@ -277,8 +289,7 @@ function run() {
     var m = message.create(data);
     message.sign(m, myPrivateKey, myKeyId);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-      console.log('Connection saved:');
-      console.log(res);
+      printMessages([res]);
     }).catch(showError);
   }
 
@@ -287,17 +298,17 @@ function run() {
     if (identifi.disconnect.length === 0) {
       return identifi.outputHelp();
     }
+    var connectedType = identifi_lib.guessTypeOf(identifi.disconnect) || 'name';
     var data = {
       author: [myId],
-      recipient: [[idType, idValue]],
+      recipient: [[idType, idValue], [connectedType, identifi.disconnect]],
       type: 'refute_connection'
     };
     if (identifi.message) { data['comment'] = identifi.message; }
     var m = message.create(data);
     message.sign(m, myPrivateKey, myKeyId);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-      console.log('Disconnection saved:');
-      console.log(res);
+      printMessages([res]);
     }).catch(showError);
   }
 
@@ -311,6 +322,7 @@ function run() {
       for (var i = 0; i < res.length; i++) {
         console.log(res[i].type.gray, res[i].value);
       }
+      console.log();
     } catch (err) {
       console.log(res);
     }
@@ -320,9 +332,27 @@ function run() {
       .then(function(res) {
         var s = res[0];
         try {
-          console.log('Sent:     ' + colors.green(s.sentPositive) + ' positive ' + colors.yellow(s.sentNeutral) + ' neutral ' + colors.red(s.sentNegative) + ' negative');
-          console.log('Received: ' + colors.green(s.receivedPositive) + ' positive ' + colors.yellow(s.receivedNeutral) + ' neutral ' + colors.red(s.receivedNegative) + ' negative');
+          console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
+          console.log(emoji.emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
           console.log('First seen: ' + moment(s.firstSeen).calendar());
+          console.log();
+        } catch (err) {
+          console.log(res);
+        }
+      }).catch(showError);
+
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: myIdType,
+        apiId: myIdValue,
+        apiAction: 'trustpaths',
+        qs: { target_type: idType, target_value: idValue }
+      })
+      .then(function(res) {
+        var s = res[0];
+        try {
+          printTrustpaths(res);
+          console.log();
         } catch (err) {
           console.log(res);
         }
