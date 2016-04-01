@@ -8,6 +8,7 @@ var message = identifi_lib.message
 var colors = require('colors');
 var moment = require('moment');
 var emoji = require('node-emoji');
+var _ = require('lodash');
 
 identifi
   .version(packageJson.version)
@@ -25,19 +26,12 @@ identifi
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
   .option('--whoami', 'Overview of your own identity')
+  .option('--raw', 'Print output in raw JSON')
   .option('-vt, --viewpoint-type <type>', 'Set trust viewpoint type')
   .option('-vv, --viewpoint-value <value>', 'Set trust viewpoint value')
   .option('-d, --max-distance <distance>', 'Maximum trust distance from viewpoint', parseInt)
   .option('-l, --limit <limit>', 'Limit the amount of results', parseInt)
   .option('-o, --offset <offset>', 'Offset of results list', parseInt);
-
-var options = {
-  viewpointType: identifi.viewpointType,
-  viewpointValue: identifi.viewpointValue,
-  maxDistance: identifi.maxDistance,
-  limit: identifi.limit || 10,
-  offset: identifi.offset || 0
-};
 
 identifi.parse(process.argv);
 
@@ -45,6 +39,14 @@ if (!process.argv.slice(2).length) {
   identifi.outputHelp();
   return;
 }
+
+var queryOptions = {
+  viewpoint_type: identifi.viewpointType,
+  viewpoint_value: identifi.viewpointValue,
+  max_distance: identifi.maxDistance,
+  limit: identifi.limit || 20,
+  offset: identifi.offset || 0
+};
 
 // Set user identity placeholder
 var myIdType = 'email';
@@ -91,6 +93,9 @@ function showTypeIfGuessed() {
 }
 
 function printTrustpaths(res) {
+  if (identifi.raw) {
+    return console.log(res);
+  }
   if (res.length === 0) {
     return console.log('No trust path to ' + idType + ':' + idValue + ' found')
   }
@@ -124,6 +129,11 @@ function printMessages(messages, showSender, showRecipient) {
       m = messages[i];
     message.decode(m);
     var d = m.signedData;
+
+    if (identifi.raw) {
+      console.log(JSON.stringify(d, null, '\t'));
+      continue;
+    }
 
     type = d.type + ' ';
     if (d.type === 'rating') {
@@ -199,7 +209,7 @@ function run() {
       apiIdType: idType,
       apiId: idValue,
       apiAction: 'connections',
-      qs: { type: identifi.get }
+      qs: _.extend({ type: identifi.get }, [queryOptions])
     }).then(function(res) {
       showTypeIfGuessed();
       if (res.length === 0) {
@@ -212,7 +222,7 @@ function run() {
   }
 
   if (identifi.received) {
-    var qs = {};
+    var qs = _.clone(queryOptions);
     if (identifi.received.length > 0 && identifi.received !== 'all') {
       qs.type = 'rating:' + identifi.received;
     }
@@ -229,8 +239,8 @@ function run() {
   }
 
   if (identifi.sent) {
-    var qs = {};
-    if (identifi.sent.length > 0 && identifi.received !== 'all') {
+    var qs = _.clone(queryOptions);
+    if (identifi.sent.length > 0 && identifi.sent !== 'all') {
       qs.type = 'rating:' + identifi.sent;
     }
     return api.request({
@@ -315,6 +325,9 @@ function run() {
   // identity & stats & trustpaths by default
   api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue })
   .then(function(res) {
+    if (identifi.raw) {
+      return console.log(res);
+    }
     try {
       if (res.length === 0) {
         return console.log('No results for ' + idType + ' ' + idValue);
@@ -330,6 +343,9 @@ function run() {
     if (res.length) {
       api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats' })
       .then(function(res) {
+        if (identifi.raw) {
+          return console.log(res);
+        }
         var s = res[0];
         try {
           console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
