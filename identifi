@@ -8,7 +8,25 @@ var message = identifi_lib.message
 var colors = require('colors');
 var moment = require('moment');
 var emoji = require('node-emoji');
+var os = require('os');
+var fs = require('fs');
 var _ = require('lodash');
+
+var config = require('./config/default.json');
+
+// Extend default config from datadir/config.json and write the result back to it
+var datadir = process.env.identifi_datadir || (os.homedir() + '/.identifi');
+(function setConfig() {
+  if (!fs.existsSync(datadir)) {
+    fs.mkdirSync(datadir);
+  }
+  var cfgFile = datadir + '/config.json';
+  if (fs.existsSync(cfgFile)) {
+    var cfgFromFile = require(cfgFile);
+    Object.assign(config, cfgFromFile);
+  }
+  fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
+})();
 
 identifi
   .version(packageJson.version)
@@ -50,7 +68,8 @@ var queryOptions = {
 
 // Set user identity placeholder
 var myIdType = 'email';
-var myIdValue = 'alice@example.com';
+var myIdValue = config.userEmail;
+var myName = config.userName;
 var myId = [myIdType, myIdValue];
 var myPrivateKey = '-----BEGIN EC PRIVATE KEY-----\n' + 'MHQCAQEEINY+49rac3jkC+S46XN0f411svOveILjev4R3aBehwUKoAcGBSuBBAAK\n' + 'oUQDQgAEKn3lQ3+/aN6xNd9DSFrYbaPSGOzLMbb1kQZ9lCMtwc6Og4hfCMLhaSbE\n' + '3sXek8e2fvKrTp8FY1MyCL4qMeVviA==\n' + '-----END EC PRIVATE KEY-----';
 var myKeyId = '12345';
@@ -131,7 +150,7 @@ function printMessages(messages, showSender, showRecipient) {
     var d = m.signedData;
 
     if (identifi.raw) {
-      console.log(JSON.stringify(d, null, '\t'));
+      console.log(JSON.stringify(d, null, 4));
       continue;
     }
 
