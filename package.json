@@ -1,17 +1,20 @@
 {
   "name": "identifi-cli",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Command line interface for Identifi",
   "homepage": "https://github.com/identifi/identifi-cli",
   "author": {
     "name": "Martti Malmi",
-    "email": "martti.malmi@iki.fi",
+    "email": "sirius@iki.fi",
     "url": "https://github.com/mmalmi"
   },
   "repository": "identifi/identifi-cli",
   "license": "MIT",
+  "main": "identifi",
   "files": [
-    "identifi"
+    "config",
+    "identifi",
+    "package.json"
   ],
   "keywords": [
     "identifi-cli",
