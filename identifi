@@ -31,7 +31,10 @@ var datadir = process.env.IDENTIFI_DATADIR || (os.homedir() + '/.identifi');
 identifi
   .version(packageJson.version)
   .usage('<identifier> [options]')
-  .description('Example: identifi bob@example.com --rate 10 -m "full trust"')
+  .description('Example:\n'
+    + '    identifi bob@example.com --rate 10 -m "full trust"\n'
+    + '    identifi bob@example.com --connect https://twitter.com/bob -m "same person"\n'
+    + '    identifi bob@example.com')
   .option('-t, --type <type>', 'Force set the identifier type')
   .option('-g, --get <type>', 'Get a connected identifier of the given type')
   .option('-r, --received [ratingType]', 'Get received positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
@@ -229,14 +232,16 @@ function run() {
       apiIdType: idType,
       apiId: idValue,
       apiAction: 'connections',
-      qs: _.extend({ type: identifi.get }, [queryOptions])
+      qs: _.extend({ type: identifi.get }, queryOptions)
     }).then(function(res) {
       showTypeIfGuessed();
       if (res.length === 0) {
         console.log(identifi.get + ' not found');
       } else {
         console.log('Related ' + identifi.get + ':');
-        console.log(res);
+        for (var i = 0; i < res.length; i++) {
+          console.log(res[i].value);
+        }
       }
     }).catch(showError);
   }
@@ -343,7 +348,7 @@ function run() {
   }
 
   // identity & stats & trustpaths by default
-  api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue })
+  api.request({ apiMethod: 'id', apiAction: 'connections', apiIdType: idType, apiId: idValue })
   .then(function(res) {
     if (identifi.raw) {
       return console.log(res);
