@@ -31,6 +31,7 @@ var datadir = process.env.identifi_datadir || (os.homedir() + '/.identifi');
 identifi
   .version(packageJson.version)
   .usage('<identifier> [options]')
+  .description('Example: identifi bob@example.com --rate 10 -m "full trust"')
   .option('-t, --type <type>', 'Force set the identifier type')
   .option('-g, --get <type>', 'Get a connected identifier of the given type')
   .option('-r, --received [ratingType]', 'Get received positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
