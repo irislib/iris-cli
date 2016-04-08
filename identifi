@@ -354,9 +354,6 @@ function run() {
       return console.log(res);
     }
     try {
-      if (res.length === 0) {
-        return console.log('No results for ' + idType + ' ' + idValue);
-      }
       for (var i = 0; i < res.length; i++) {
         console.log(res[i].type.gray, res[i].value);
       }
@@ -365,23 +362,23 @@ function run() {
       console.log(res);
     }
 
-    if (res.length) {
-      api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats' })
-      .then(function(res) {
-        if (identifi.raw) {
-          return console.log(res);
-        }
-        var s = res[0];
-        try {
-          console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
-          console.log(emoji.emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
-          console.log('First seen: ' + moment(s.firstSeen).calendar());
-          console.log();
-        } catch (err) {
-          console.log(res);
-        }
-      }).catch(showError);
+    api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats' })
+    .then(function(res) {
+      if (identifi.raw) {
+        return console.log(res);
+      }
+      var s = res[0];
+      try {
+        console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
+        console.log(emoji.emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
+        console.log('First seen: ' + moment(s.firstSeen).calendar());
+        console.log();
+      } catch (err) {
+        console.log(res);
+      }
+    }).catch(showError);
 
+    if (idType != myIdType || idValue != myIdValue) {
       return api.request({
         apiMethod: 'id',
         apiIdType: myIdType,
