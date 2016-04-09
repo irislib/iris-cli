@@ -45,12 +45,13 @@ identifi
   .option('--disconnect <identifier>', 'Disconnect an identifier from the identity')
   .option('-m --message <message>', 'Include a comment with a rating / connection')
   .option('--trustpath', 'Get a trust path to the identity')
+  .option('--trustmap', 'Generate a trustmap for an identifier')
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
   .option('--whoami', 'Overview of your own identity')
   .option('--raw', 'Print output in raw JSON')
-  .option('-vt, --viewpoint-type <type>', 'Set trust viewpoint type')
-  .option('-vv, --viewpoint-value <value>', 'Set trust viewpoint value')
+  .option('--viewpoint-type <type>', 'Set trust viewpoint type')
+  .option('--viewpoint-value <value>', 'Set trust viewpoint value')
   .option('-d, --max-distance <distance>', 'Maximum trust distance from viewpoint', parseInt)
   .option('-l, --limit <limit>', 'Limit the amount of results', parseInt)
   .option('-o, --offset <offset>', 'Offset of results list', parseInt);
@@ -289,6 +290,18 @@ function run() {
       qs: { target_type: idType, target_value: idValue }
     }).then(function(res) {
       printTrustpaths(res);
+    }).catch(showError);
+  }
+
+  if (identifi.trustmap) {
+    return api.request({
+      apiMethod: 'id',
+      apiIdType: myIdType,
+      apiId: myIdValue,
+      apiAction: 'generatetrustmap',
+      qs: { depth: 3 }
+    }).then(function(res) {
+      console.log(res);
     }).catch(showError);
   }
 
