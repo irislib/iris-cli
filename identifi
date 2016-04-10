@@ -46,6 +46,7 @@ identifi
   .option('-m --message <message>', 'Include a comment with a rating / connection')
   .option('--trustpath', 'Get a trust path to the identity')
   .option('--trustmap', 'Generate a trustmap for an identifier')
+  .option('--follow', 'Show new messages in real-time')
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
   .option('--whoami', 'Overview of your own identity')
@@ -106,13 +107,6 @@ function showError(error) {
     } else {
       console.log(error);
     }
-  }
-}
-
-function showTypeIfGuessed() {
-  if (!identifi.type) {
-    console.log(idType + ': ' + idValue);
-    console.log();
   }
 }
 
@@ -223,7 +217,6 @@ function printMessages(messages, showSender, showRecipient) {
 
     console.log(emoji.emojify(str));
   }
-  console.log();
 }
 
 function run() {
@@ -235,11 +228,10 @@ function run() {
       apiAction: 'connections',
       qs: _.extend({ type: identifi.get }, queryOptions)
     }).then(function(res) {
-      showTypeIfGuessed();
+      console.log('Related ' + identifi.get + ' for ' + idType + ':' + idValue);
       if (res.length === 0) {
-        console.log(identifi.get + ' not found');
+        console.log('not found');
       } else {
-        console.log('Related ' + identifi.get + ':');
         for (var i = 0; i < res.length; i++) {
           console.log(res[i].value);
         }
@@ -259,7 +251,7 @@ function run() {
       apiAction: 'received',
       qs: qs
     }).then(function(res) {
-      showTypeIfGuessed();
+      console.log('Messages received by ' + idType + ': ' + idValue);
       printMessages(res, true, false);
     }).catch(showError);
   }
@@ -276,7 +268,7 @@ function run() {
       apiAction: 'sent',
       qs: qs
     }).then(function(res) {
-      showTypeIfGuessed();
+      console.log('Messages sent by ' + idType + ': ' + idValue);
       printMessages(res, false, true);
     }).catch(showError);
   }
@@ -318,12 +310,12 @@ function run() {
     var m = message.createRating(data);
     message.sign(m, myPrivateKey, myKeyId);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+      console.log('Rating saved');
       printMessages([res], false, true);
     }).catch(showError);
   }
 
   if (identifi.connect) {
-    showTypeIfGuessed();
     if (identifi.connect.length === 0) {
       return identifi.outputHelp();
     }
@@ -337,12 +329,12 @@ function run() {
     var m = message.create(data);
     message.sign(m, myPrivateKey, myKeyId);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+      console.log('Connection saved');
       printMessages([res]);
     }).catch(showError);
   }
 
   if (identifi.disconnect) {
-    showTypeIfGuessed();
     if (identifi.disconnect.length === 0) {
       return identifi.outputHelp();
     }
@@ -356,13 +348,15 @@ function run() {
     var m = message.create(data);
     message.sign(m, myPrivateKey, myKeyId);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+      console.log('Disconnection saved');
       printMessages([res]);
     }).catch(showError);
   }
 
   // identity & stats & trustpaths by default
-  api.request({ apiMethod: 'id', apiAction: 'connections', apiIdType: idType, apiId: idValue })
+  api.request({ apiMethod: 'id', apiAction: 'connections', apiIdType: idType, apiId: idValue, qs: queryOptions })
   .then(function(res) {
+    console.log(idType + ': ' + idValue);
     if (identifi.raw) {
       return console.log(res);
     }
@@ -375,7 +369,7 @@ function run() {
       console.log(res);
     }
 
-    api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats' })
+    api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats', qs: queryOptions })
     .then(function(res) {
       if (identifi.raw) {
         return console.log(res);
@@ -413,15 +407,29 @@ function run() {
 }
 
 if (identifi.status) {
-  return api.request({ apiMethod: 'status' }).then(function(res) {
+  return api.request({ }).then(function(res) {
     console.log(res);
   }).catch(showError);
 };
 
-try {
-  run();
-} catch (err) {
-  console.log(err.message);
+if (identifi.follow) {
+  console.log('Listening to new messages from identifi node')
+  var socket = api.getSocket();
+  socket.on('msg', function(data) {
+    var m;
+    try {
+      m = message.decode(data);
+    } catch (e) {
+      console.log('error decoding message');
+    }
+    printMessages([m], true, true);
+  });
+} else {
+  try {
+    run();
+  } catch (err) {
+    console.log(err.message);
+  }
 }
 
 module.exports = identifi;
