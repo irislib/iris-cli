@@ -185,7 +185,7 @@ function printMessages(messages, showSender, showRecipient) {
     }
 
     if (d.type === 'confirm_connection') {
-      type = ':white_check_mark:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
+      type = '\u2713'.green + ' [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
       showThisRecipient = false;
     }
     if (d.type === 'refute_connection') {
@@ -362,7 +362,12 @@ function run() {
     }
     try {
       for (var i = 0; i < res.length; i++) {
-        console.log(res[i].type.gray, res[i].value);
+        var str = res[i].type.gray + ' ' + res[i].value + ' ';
+        str += ('\u2713 ' + res[i].confirmations + ' ').green;
+        if (res[i].refutations > 0) {
+          str += ('\u274C  ' + res[i].refutations + ' ').red;
+        }
+        console.log(str);
       }
       console.log();
     } catch (err) {
