@@ -308,7 +308,7 @@ function run() {
     };
     if (identifi.message) { data['comment'] = identifi.message; }
     var m = message.createRating(data);
-    message.sign(m, myKey.prvKeyObj.pem, myKey.pubKeyObj.pubKeyHex);
+    message.sign(m, myKey.private.pem, myKey.public.hex);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
       console.log('Rating saved');
       printMessages([res], false, true);
@@ -327,7 +327,7 @@ function run() {
     };
     if (identifi.message) { data['comment'] = identifi.message; }
     var m = message.create(data);
-    message.sign(m, myKey.prvKeyObj.pem, myKey.pubKeyObj.pubKeyHex);
+    message.sign(m, myKey.private.pem, myKey.public.hex);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
       console.log('Connection saved');
       printMessages([res]);
@@ -346,7 +346,7 @@ function run() {
     };
     if (identifi.message) { data['comment'] = identifi.message; }
     var m = message.create(data);
-    message.sign(m, myKey.prvKeyObj.pem, myKey.pubKeyObj.pubKeyHex);
+    message.sign(m, myKey.private.pem, myKey.public.hex);
     return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
       console.log('Disconnection saved');
       printMessages([res]);
