@@ -61,7 +61,18 @@ var datadir = process.env.IDENTIFI_DATADIR || (os.homedir() + '/.identifi');
   if (!config.userName || !config.userEmail) {
     inquirer.prompt([
       { type: 'input', name: 'name', message: 'Please enter your name (public)' },
-      { type: 'input', name: 'email', message: 'Please enter your email address (public)' }
+      { type: 'input',
+        name: 'email',
+        message: 'Please enter your email address (public)',
+        validate: function (value) {
+          var pass = value.match(identifi_lib.UNIQUE_ID_VALIDATORS.email);
+          if (pass) {
+            return true;
+          }
+
+          return 'Please enter a valid email address';
+        }
+      }
     ])
     .then(function(answers) {
       config.userName = answers.name;
