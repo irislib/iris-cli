@@ -11,23 +11,10 @@ var moment = require('moment');
 var emoji = require('node-emoji');
 var os = require('os');
 var fs = require('fs');
+var inquirer = require('inquirer');
 var _ = require('lodash');
 
 var config = require('./config/default.json');
-
-// Extend default config from datadir/config.json and write the result back to it
-var datadir = process.env.IDENTIFI_DATADIR || (os.homedir() + '/.identifi');
-(function setConfig() {
-  if (!fs.existsSync(datadir)) {
-    fs.mkdirSync(datadir);
-  }
-  var cfgFile = datadir + '/config.json';
-  if (fs.existsSync(cfgFile)) {
-    var cfgFromFile = require(cfgFile);
-    Object.assign(config, cfgFromFile);
-  }
-  fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
-})();
 
 identifi
   .version(packageJson.version)
@@ -58,382 +45,414 @@ identifi
   .option('-l, --limit <limit>', 'Limit the amount of results', parseInt)
   .option('-o, --offset <offset>', 'Offset of results list', parseInt);
 
-identifi.parse(process.argv);
-
-if (!process.argv.slice(2).length) {
-  identifi.outputHelp();
-  return;
-}
-
-var queryOptions = {
-  viewpoint_type: identifi.viewpointType,
-  viewpoint_value: identifi.viewpointValue,
-  max_distance: identifi.maxDistance,
-  limit: identifi.limit || 20,
-  offset: identifi.offset || 0
-};
-
-// Set user identity placeholder
-var myIdType = 'email';
-var myIdValue = config.userEmail;
-var myName = config.userName;
-var myId = [myIdType, myIdValue];
-var myKey = keyutil.getDefault(datadir);
-
-// Process identifier param
-var idValue = identifi.args[0];
-var idType;
-if (identifi.type) {
-  idType = identifi.type;
-} else if (idValue) {
-  idType = identifi_lib.guessTypeOf(idValue) || 'name';
-}
-if (!idValue) {
-  idType = myIdType;
-  idValue = myIdValue;
-}
-var identifier = [idType, idValue];
-
-function showError(error) {
-  console.log('Identifi request failed: ');
-  if (error.options && error.options.uri && error.options.method) {
-      console.log(error.options.method, error.options.uri);
+// Extend default config from datadir/config.json and write the result back to it
+var datadir = process.env.IDENTIFI_DATADIR || (os.homedir() + '/.identifi');
+(function setConfigAndRun() {
+  if (!fs.existsSync(datadir)) {
+    console.log('Setting up identifi configuration to ' + datadir);
+    fs.mkdirSync(datadir);
   }
-  if (error.response) {
-    console.log(error.statusCode, error.response.statusMessage);
+  var cfgFile = datadir + '/config.json';
+  if (fs.existsSync(cfgFile)) {
+    var cfgFromFile = require(cfgFile);
+    Object.assign(config, cfgFromFile);
+  }
+
+  if (!config.userName || !config.userEmail) {
+    inquirer.prompt([
+      { type: 'input', name: 'name', message: 'Please enter your name (public)' },
+      { type: 'input', name: 'email', message: 'Please enter your email address (public)' }
+    ])
+    .then(function(answers) {
+      config.userName = answers.name;
+      config.userEmail = answers.email;
+      fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
+      runIdentifi();
+    });
   } else {
-    if (error.message) {
-      console.log(error.message);
+    fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
+    runIdentifi();
+  }
+})();
+
+function runIdentifi() {
+  identifi.parse(process.argv);
+
+  if (!process.argv.slice(2).length) {
+    identifi.outputHelp();
+    return;
+  }
+
+  var queryOptions = {
+    viewpoint_type: identifi.viewpointType,
+    viewpoint_value: identifi.viewpointValue,
+    max_distance: identifi.maxDistance,
+    limit: identifi.limit || 20,
+    offset: identifi.offset || 0
+  };
+
+  // Set user identity placeholder
+  var myIdType = 'email';
+  var myIdValue = config.userEmail;
+  var myName = config.userName;
+  var myId = [myIdType, myIdValue];
+  var myKey = keyutil.getDefault(datadir);
+
+  // Process identifier param
+  var idValue = identifi.args[0];
+  var idType;
+  if (identifi.type) {
+    idType = identifi.type;
+  } else if (idValue) {
+    idType = identifi_lib.guessTypeOf(idValue) || 'name';
+  }
+  if (!idValue) {
+    idType = myIdType;
+    idValue = myIdValue;
+  }
+  var identifier = [idType, idValue];
+
+  function showError(error) {
+    console.log('Identifi request failed: ');
+    if (error.options && error.options.uri && error.options.method) {
+        console.log(error.options.method, error.options.uri);
+    }
+    if (error.response) {
+      console.log(error.statusCode, error.response.statusMessage);
     } else {
-      console.log(error);
-    }
-  }
-}
-
-function printTrustpaths(res) {
-  if (identifi.raw) {
-    return console.log(res);
-  }
-  if (res.length === 0) {
-    return console.log('No trust path to ' + idType + ':' + idValue + ' found')
-  }
-  // Format a trustpath string
-  for (var i = 0; i < res.length; i++) {
-    var tp = res[i];
-    if (res[i].path_string) {
-      var arr = res[i].path_string.split(':');
-      tp = res.length > 1 ? i + ': ' : '';
-      for (var j = 0; j < arr.length; j++) {
-        if (j % 2 === 1) {
-          tp = tp + arr[j-1] + ':' + arr[j];
-          if (j < arr.length - 2) {
-            tp = tp + ' :thumbsup:  ';
-          }
-        }
-      }
-    }
-    console.log('Trust path:')
-    console.log(emoji.emojify(tp));
-  }
-}
-
-function printMessages(messages, showSender, showRecipient) {
-  if (messages.length === 0) {
-    console.log('No messages');
-  }
-  for (var i = 0; i < messages.length; i++) {
-    var showThisRecipient = showRecipient, showThisSender = showSender;
-    var str = '', type,
-      m = messages[i];
-    message.decode(m);
-    var d = m.signedData;
-
-    if (identifi.raw) {
-      console.log(JSON.stringify(d, null, 4));
-      continue;
-    }
-
-    type = d.type + ' ';
-    if (d.type === 'rating') {
-      type = '';
-
-      var iconStyle, iconCount = 1;
-      var rating = parseInt(d.rating);
-      d.maxRating = parseInt(d.maxRating);
-      d.minRating = parseInt(d.minRating);
-      var neutralRating = (d.minRating + d.maxRating) / 2;
-      var maxRatingDiff = (d.maxRating - neutralRating);
-      var minRatingDiff = (d.minRating - neutralRating);
-      if (rating > neutralRating) {
-        iconStyle = ':thumbsup: ';
-        iconCount = (maxRatingDiff < 2) ? iconCount : Math.ceil(3 * rating / maxRatingDiff);
-        //alpha = (rating - neutralRating - 0.5) / maxRatingDiff / 1.25 + 0.2;
-        //msg.bgColor = 'background-image:linear-gradient(rgba(223,240,216,'+alpha+') 0%, rgba(208,233,198,'+alpha+') 100%);background-color: rgba(223,240,216,'+alpha+');';
-      } else if (rating < neutralRating) {
-        iconStyle = ':thumbsdown: ';
-        iconCount = (minRatingDiff > -2) ? iconCount : Math.ceil(3 * rating / minRatingDiff);
-        //alpha = (rating - neutralRating + 0.5) / minRatingDiff / 1.25 + 0.2;
-        //msg.bgColor = 'background-image:linear-gradient(rgba(242,222,222,'+alpha+') 0%, rgba(235,204,204,'+alpha+') 100%);background-color: rgba(242,222,222,'+alpha+');';
+      if (error.message) {
+        console.log(error.message);
       } else {
-        iconStyle = ':question: ';
+        console.log(error);
       }
-
-      for (var j = 0; j < iconCount; j++) {
-        type += iconStyle;
-      }
-      type += ' ';
     }
-
-    if (d.type === 'confirm_connection') {
-      type = '\u2713'.green + ' [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
-      showThisRecipient = false;
-    }
-    if (d.type === 'refute_connection') {
-      type = ':x:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
-      showThisRecipient = false;
-    }
-    str = str + type;
-
-    if (d.comment) {
-      str = str + '"' + d.comment.substring(0, 50);
-      if (d.comment.length > 50) {
-        str = str + '...';
-      }
-      str = str + '" ';
-    }
-
-    if (showThisSender) {
-      str += 'by '.gray;
-      if (d.author[0][0] !== 'email') {
-        str += d.author[0][0] + ':';
-      }
-      str += d.author[0][1] + ' ';
-    }
-    if (showThisRecipient) {
-      str = str + 'to '.gray + d.recipient[0][0] + ':' + d.recipient[0][1] + ' ';
-    }
-
-    str = str + moment(d.timestamp).calendar().gray + ' ';
-
-    console.log(emoji.emojify(str));
-  }
-}
-
-function run() {
-  if (identifi.get) {
-    return api.request({
-      apiMethod: 'id',
-      apiIdType: idType,
-      apiId: idValue,
-      apiAction: 'connections',
-      qs: _.extend({ type: identifi.get }, queryOptions)
-    }).then(function(res) {
-      console.log('Related ' + identifi.get + ' for ' + idType + ':' + idValue);
-      if (res.length === 0) {
-        console.log('not found');
-      } else {
-        for (var i = 0; i < res.length; i++) {
-          console.log(res[i].value);
-        }
-      }
-    }).catch(showError);
   }
 
-  if (identifi.received) {
-    var qs = _.clone(queryOptions);
-    if (identifi.received.length > 0 && identifi.received !== 'all') {
-      qs.type = 'rating:' + identifi.received;
-    }
-    return api.request({
-      apiMethod: 'id',
-      apiIdType: idType,
-      apiId: idValue,
-      apiAction: 'received',
-      qs: qs
-    }).then(function(res) {
-      console.log('Messages received by ' + idType + ': ' + idValue);
-      printMessages(res, true, false);
-    }).catch(showError);
-  }
-
-  if (identifi.sent) {
-    var qs = _.clone(queryOptions);
-    if (identifi.sent.length > 0 && identifi.sent !== 'all') {
-      qs.type = 'rating:' + identifi.sent;
-    }
-    return api.request({
-      apiMethod: 'id',
-      apiIdType: idType,
-      apiId: idValue,
-      apiAction: 'sent',
-      qs: qs
-    }).then(function(res) {
-      console.log('Messages sent by ' + idType + ': ' + idValue);
-      printMessages(res, false, true);
-    }).catch(showError);
-  }
-
-  if (identifi.trustpath) {
-    return api.request({
-      apiMethod: 'id',
-      apiIdType: myIdType,
-      apiId: myIdValue,
-      apiAction: 'trustpaths',
-      qs: { target_type: idType, target_value: idValue }
-    }).then(function(res) {
-      printTrustpaths(res);
-    }).catch(showError);
-  }
-
-  if (identifi.trustmap) {
-    return api.request({
-      apiMethod: 'id',
-      apiIdType: myIdType,
-      apiId: myIdValue,
-      apiAction: 'generatetrustmap',
-      qs: { depth: 3 }
-    }).then(function(res) {
-      console.log(res);
-    }).catch(showError);
-  }
-
-  if (identifi.rate) {
-    if (parseInt(identifi.rate) === NaN) {
-      return identifi.outputHelp();
-    }
-    var data = {
-      author: [myId],
-      recipient: [[idType, idValue]],
-      rating: identifi.rate
-    };
-    if (identifi.message) { data['comment'] = identifi.message; }
-    var m = message.createRating(data);
-    message.sign(m, myKey.private.pem, myKey.public.hex);
-    return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-      console.log('Rating saved');
-      printMessages([res], false, true);
-    }).catch(showError);
-  }
-
-  if (identifi.connect) {
-    if (identifi.connect.length === 0) {
-      return identifi.outputHelp();
-    }
-    var connectedType = identifi_lib.guessTypeOf(identifi.connect) || 'name';
-    var data = {
-      author: [myId],
-      recipient: [[idType, idValue], [connectedType, identifi.connect]],
-      type: 'confirm_connection'
-    };
-    if (identifi.message) { data['comment'] = identifi.message; }
-    var m = message.create(data);
-    message.sign(m, myKey.private.pem, myKey.public.hex);
-    return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-      console.log('Connection saved');
-      printMessages([res]);
-    }).catch(showError);
-  }
-
-  if (identifi.disconnect) {
-    if (identifi.disconnect.length === 0) {
-      return identifi.outputHelp();
-    }
-    var connectedType = identifi_lib.guessTypeOf(identifi.disconnect) || 'name';
-    var data = {
-      author: [myId],
-      recipient: [[idType, idValue], [connectedType, identifi.disconnect]],
-      type: 'refute_connection'
-    };
-    if (identifi.message) { data['comment'] = identifi.message; }
-    var m = message.create(data);
-    message.sign(m, myKey.private.pem, myKey.public.hex);
-    return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-      console.log('Disconnection saved');
-      printMessages([res]);
-    }).catch(showError);
-  }
-
-  // identity & stats & trustpaths by default
-  api.request({ apiMethod: 'id', apiAction: 'connections', apiIdType: idType, apiId: idValue, qs: queryOptions })
-  .then(function(res) {
-    console.log(idType + ': ' + idValue);
+  function printTrustpaths(res) {
     if (identifi.raw) {
       return console.log(res);
     }
-    try {
-      for (var i = 0; i < res.length; i++) {
-        var str = res[i].type.gray + ' ' + res[i].value + ' ';
-        str += ('\u2713 ' + res[i].confirmations + ' ').green;
-        if (res[i].refutations > 0) {
-          str += ('\u274C  ' + res[i].refutations + ' ').red;
+    if (res.length === 0) {
+      return console.log('No trust path to ' + idType + ':' + idValue + ' found')
+    }
+    // Format a trustpath string
+    for (var i = 0; i < res.length; i++) {
+      var tp = res[i];
+      if (res[i].path_string) {
+        var arr = res[i].path_string.split(':');
+        tp = res.length > 1 ? i + ': ' : '';
+        for (var j = 0; j < arr.length; j++) {
+          if (j % 2 === 1) {
+            tp = tp + arr[j-1] + ':' + arr[j];
+            if (j < arr.length - 2) {
+              tp = tp + ' :thumbsup:  ';
+            }
+          }
         }
-        console.log(str);
       }
-      console.log();
-    } catch (err) {
-      console.log(res);
+      console.log('Trust path:')
+      console.log(emoji.emojify(tp));
+    }
+  }
+
+  function printMessages(messages, showSender, showRecipient) {
+    if (messages.length === 0) {
+      console.log('No messages');
+    }
+    for (var i = 0; i < messages.length; i++) {
+      var showThisRecipient = showRecipient, showThisSender = showSender;
+      var str = '', type,
+        m = messages[i];
+      message.decode(m);
+      var d = m.signedData;
+
+      if (identifi.raw) {
+        console.log(JSON.stringify(d, null, 4));
+        continue;
+      }
+
+      type = d.type + ' ';
+      if (d.type === 'rating') {
+        type = '';
+
+        var iconStyle, iconCount = 1;
+        var rating = parseInt(d.rating);
+        d.maxRating = parseInt(d.maxRating);
+        d.minRating = parseInt(d.minRating);
+        var neutralRating = (d.minRating + d.maxRating) / 2;
+        var maxRatingDiff = (d.maxRating - neutralRating);
+        var minRatingDiff = (d.minRating - neutralRating);
+        if (rating > neutralRating) {
+          iconStyle = ':thumbsup: ';
+          iconCount = (maxRatingDiff < 2) ? iconCount : Math.ceil(3 * rating / maxRatingDiff);
+          //alpha = (rating - neutralRating - 0.5) / maxRatingDiff / 1.25 + 0.2;
+          //msg.bgColor = 'background-image:linear-gradient(rgba(223,240,216,'+alpha+') 0%, rgba(208,233,198,'+alpha+') 100%);background-color: rgba(223,240,216,'+alpha+');';
+        } else if (rating < neutralRating) {
+          iconStyle = ':thumbsdown: ';
+          iconCount = (minRatingDiff > -2) ? iconCount : Math.ceil(3 * rating / minRatingDiff);
+          //alpha = (rating - neutralRating + 0.5) / minRatingDiff / 1.25 + 0.2;
+          //msg.bgColor = 'background-image:linear-gradient(rgba(242,222,222,'+alpha+') 0%, rgba(235,204,204,'+alpha+') 100%);background-color: rgba(242,222,222,'+alpha+');';
+        } else {
+          iconStyle = ':question: ';
+        }
+
+        for (var j = 0; j < iconCount; j++) {
+          type += iconStyle;
+        }
+        type += ' ';
+      }
+
+      if (d.type === 'confirm_connection') {
+        type = '\u2713'.green + ' [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
+        showThisRecipient = false;
+      }
+      if (d.type === 'refute_connection') {
+        type = ':x:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
+        showThisRecipient = false;
+      }
+      str = str + type;
+
+      if (d.comment) {
+        str = str + '"' + d.comment.substring(0, 50);
+        if (d.comment.length > 50) {
+          str = str + '...';
+        }
+        str = str + '" ';
+      }
+
+      if (showThisSender) {
+        str += 'by '.gray;
+        if (d.author[0][0] !== 'email') {
+          str += d.author[0][0] + ':';
+        }
+        str += d.author[0][1] + ' ';
+      }
+      if (showThisRecipient) {
+        str = str + 'to '.gray + d.recipient[0][0] + ':' + d.recipient[0][1] + ' ';
+      }
+
+      str = str + moment(d.timestamp).calendar().gray + ' ';
+
+      console.log(emoji.emojify(str));
+    }
+  }
+
+  function runCommand() {
+    if (identifi.get) {
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: idType,
+        apiId: idValue,
+        apiAction: 'connections',
+        qs: _.extend({ type: identifi.get }, queryOptions)
+      }).then(function(res) {
+        console.log('Related ' + identifi.get + ' for ' + idType + ':' + idValue);
+        if (res.length === 0) {
+          console.log('not found');
+        } else {
+          for (var i = 0; i < res.length; i++) {
+            console.log(res[i].value);
+          }
+        }
+      }).catch(showError);
     }
 
-    api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats', qs: queryOptions })
-    .then(function(res) {
-      if (identifi.raw) {
-        return console.log(res);
+    if (identifi.received) {
+      var qs = _.clone(queryOptions);
+      if (identifi.received.length > 0 && identifi.received !== 'all') {
+        qs.type = 'rating:' + identifi.received;
       }
-      var s = res[0];
-      try {
-        console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
-        console.log(emoji.emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
-        console.log('First seen: ' + moment(s.firstSeen).calendar());
-        console.log();
-      } catch (err) {
-        console.log(res);
-      }
-    }).catch(showError);
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: idType,
+        apiId: idValue,
+        apiAction: 'received',
+        qs: qs
+      }).then(function(res) {
+        console.log('Messages received by ' + idType + ': ' + idValue);
+        printMessages(res, true, false);
+      }).catch(showError);
+    }
 
-    if (idType != myIdType || idValue != myIdValue) {
+    if (identifi.sent) {
+      var qs = _.clone(queryOptions);
+      if (identifi.sent.length > 0 && identifi.sent !== 'all') {
+        qs.type = 'rating:' + identifi.sent;
+      }
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: idType,
+        apiId: idValue,
+        apiAction: 'sent',
+        qs: qs
+      }).then(function(res) {
+        console.log('Messages sent by ' + idType + ': ' + idValue);
+        printMessages(res, false, true);
+      }).catch(showError);
+    }
+
+    if (identifi.trustpath) {
       return api.request({
         apiMethod: 'id',
         apiIdType: myIdType,
         apiId: myIdValue,
         apiAction: 'trustpaths',
         qs: { target_type: idType, target_value: idValue }
-      })
+      }).then(function(res) {
+        printTrustpaths(res);
+      }).catch(showError);
+    }
+
+    if (identifi.trustmap) {
+      return api.request({
+        apiMethod: 'id',
+        apiIdType: myIdType,
+        apiId: myIdValue,
+        apiAction: 'generatetrustmap',
+        qs: { depth: 3 }
+      }).then(function(res) {
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.rate) {
+      if (parseInt(identifi.rate) === NaN) {
+        return identifi.outputHelp();
+      }
+      var data = {
+        author: [myId],
+        recipient: [[idType, idValue]],
+        rating: identifi.rate
+      };
+      if (identifi.message) { data['comment'] = identifi.message; }
+      var m = message.createRating(data);
+      message.sign(m, myKey.private.pem, myKey.public.hex);
+      return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+        console.log('Rating saved');
+        printMessages([res], false, true);
+      }).catch(showError);
+    }
+
+    if (identifi.connect) {
+      if (identifi.connect.length === 0) {
+        return identifi.outputHelp();
+      }
+      var connectedType = identifi_lib.guessTypeOf(identifi.connect) || 'name';
+      var data = {
+        author: [myId],
+        recipient: [[idType, idValue], [connectedType, identifi.connect]],
+        type: 'confirm_connection'
+      };
+      if (identifi.message) { data['comment'] = identifi.message; }
+      var m = message.create(data);
+      message.sign(m, myKey.private.pem, myKey.public.hex);
+      return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+        console.log('Connection saved');
+        printMessages([res]);
+      }).catch(showError);
+    }
+
+    if (identifi.disconnect) {
+      if (identifi.disconnect.length === 0) {
+        return identifi.outputHelp();
+      }
+      var connectedType = identifi_lib.guessTypeOf(identifi.disconnect) || 'name';
+      var data = {
+        author: [myId],
+        recipient: [[idType, idValue], [connectedType, identifi.disconnect]],
+        type: 'refute_connection'
+      };
+      if (identifi.message) { data['comment'] = identifi.message; }
+      var m = message.create(data);
+      message.sign(m, myKey.private.pem, myKey.public.hex);
+      return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
+        console.log('Disconnection saved');
+        printMessages([res]);
+      }).catch(showError);
+    }
+
+    // identity & stats & trustpaths by default
+    api.request({ apiMethod: 'id', apiAction: 'connections', apiIdType: idType, apiId: idValue, qs: queryOptions })
+    .then(function(res) {
+      console.log(idType + ': ' + idValue);
+      if (identifi.raw) {
+        return console.log(res);
+      }
+      try {
+        for (var i = 0; i < res.length; i++) {
+          var str = res[i].type.gray + ' ' + res[i].value + ' ';
+          str += ('\u2713 ' + res[i].confirmations + ' ').green;
+          if (res[i].refutations > 0) {
+            str += ('\u274C  ' + res[i].refutations + ' ').red;
+          }
+          console.log(str);
+        }
+        console.log();
+      } catch (err) {
+        console.log(res);
+      }
+
+      api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats', qs: queryOptions })
       .then(function(res) {
+        if (identifi.raw) {
+          return console.log(res);
+        }
         var s = res[0];
         try {
-          printTrustpaths(res);
+          console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
+          console.log(emoji.emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
+          console.log('First seen: ' + moment(s.firstSeen).calendar());
           console.log();
         } catch (err) {
           console.log(res);
         }
       }).catch(showError);
-    }
-  }).catch(showError);
-}
 
-if (identifi.status) {
-  return api.request({ }).then(function(res) {
-    console.log(res);
-  }).catch(showError);
-};
+      if (idType != myIdType || idValue != myIdValue) {
+        return api.request({
+          apiMethod: 'id',
+          apiIdType: myIdType,
+          apiId: myIdValue,
+          apiAction: 'trustpaths',
+          qs: { target_type: idType, target_value: idValue }
+        })
+        .then(function(res) {
+          var s = res[0];
+          try {
+            printTrustpaths(res);
+            console.log();
+          } catch (err) {
+            console.log(res);
+          }
+        }).catch(showError);
+      }
+    }).catch(showError);
+  }
 
-if (identifi.follow) {
-  console.log('Listening to new messages from identifi node')
-  var socket = api.getSocket();
-  socket.on('msg', function(data) {
-    var m;
+  if (identifi.status) {
+    return api.request({ }).then(function(res) {
+      console.log(res);
+    }).catch(showError);
+  };
+
+  if (identifi.follow) {
+    console.log('Listening to new messages from identifi node')
+    var socket = api.getSocket();
+    socket.on('msg', function(data) {
+      var m;
+      try {
+        m = message.decode(data);
+      } catch (e) {
+        console.log('error decoding message');
+      }
+      printMessages([m], true, true);
+    });
+  } else {
     try {
-      m = message.decode(data);
-    } catch (e) {
-      console.log('error decoding message');
+      runCommand();
+    } catch (err) {
+      console.log(err.message);
     }
-    printMessages([m], true, true);
-  });
-} else {
-  try {
-    run();
-  } catch (err) {
-    console.log(err.message);
   }
 }
 
