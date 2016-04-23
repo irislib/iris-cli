@@ -334,7 +334,8 @@ function runIdentifi() {
       var data = {
         author: myAuthorId,
         recipient: [[idType, idValue]],
-        rating: identifi.rate
+        rating: identifi.rate,
+        context: 'identifi'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
       var m = message.createRating(data);
