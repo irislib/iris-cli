@@ -9,7 +9,7 @@ var keyutil = identifi_lib.keyutil;
 var colors = require('colors');
 var moment = require('moment');
 var emoji = require('node-emoji');
-var os = require('os');
+var osHomedir = require('os-homedir');
 var fs = require('fs');
 var inquirer = require('inquirer');
 var _ = require('lodash');
@@ -46,7 +46,7 @@ identifi
   .option('-o, --offset <offset>', 'Offset of results list', parseInt);
 
 // Extend default config from datadir/config.json and write the result back to it
-var datadir = process.env.IDENTIFI_DATADIR || (os.homedir() + '/.identifi');
+var datadir = process.env.IDENTIFI_DATADIR || (osHomedir() + '/.identifi');
 (function setConfigAndRun() {
   if (!fs.existsSync(datadir)) {
     fs.mkdirSync(datadir);
