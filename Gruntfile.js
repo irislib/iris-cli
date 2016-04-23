@@ -12,27 +12,20 @@ module.exports = function (grunt) {
                 reporter: require('jshint-stylish')
             },
             js: {
-                src: ['*.js']
+                src: ['*.js', 'identifi']
             },
             test: {
                 src: ['test/**/*.js']
             }
         },
-        mochacli: {
-            options: {
-                reporter: 'spec',
-                bail: true
-            },
-            all: ['test/*.js']
-        },
         watch: {
-            files: ['*.js', 'test/**/*.js'],
-            tasks: ['jshint', 'mochacli']
+            files: ['*.js', 'test/**/*.js', 'identifi'],
+            tasks: ['jshint']
         },
         release: {
             options: {}
         }
     });
 
-    grunt.registerTask('default', ['jshint', 'mochacli']);
+    grunt.registerTask('default', ['jshint']);
 };
