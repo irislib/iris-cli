@@ -102,13 +102,13 @@ function runIdentifi() {
     offset: identifi.offset || 0
   };
 
-  // Set user identity placeholder
+  // Set user identity
   var myIdType = 'email';
   var myIdValue = config.userEmail;
   var myName = config.userName;
   var myId = [myIdType, myIdValue];
-  var myAuthorId = [myId, ['name', myName]];
   var myKey = keyutil.getDefault(datadir);
+  var myAuthorId = [myId, ['name', myName], ['keyID', myKey.hash]];
 
   // Process identifier param
   var idValue = identifi.args[0];
