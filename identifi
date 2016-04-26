@@ -33,7 +33,7 @@ identifi
   .option('--disconnect <identifier>', 'Disconnect an identifier from the identity')
   .option('-m --message <message>', 'Include a comment with a rating / connection')
   .option('--trustpath', 'Get a trust path to the identity')
-  .option('--trustmap', 'Generate a trustmap for an identifier')
+  .option('--generatewot', 'Generate a Web of Trust index for an identifier')
   .option('--follow', 'Show new messages in real-time')
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
@@ -315,13 +315,14 @@ function runIdentifi() {
       }).catch(showError);
     }
 
-    if (identifi.trustmap) {
+    if (identifi.generatewot) {
       return api.request({
         apiMethod: 'id',
         apiIdType: myIdType,
         apiId: myIdValue,
-        apiAction: 'generatetrustmap',
+        apiAction: 'generatewotindex',
         qs: { depth: 3 }
+        // TODO: auth
       }).then(function(res) {
         console.log(res);
       }).catch(showError);
