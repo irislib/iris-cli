@@ -17,14 +17,14 @@ var _ = require('lodash');
 var config = require('./config/default.json');
 
 function emojify(str) {
-  if (process.platform === 'darwin') {
+  if (process.platform !== 'darwin') {
     str = emoji.emojify(str);
   } else {
-    str = str.replace(':thumbsup:', '+');
-    str = str.replace(':thumbsdown:', '-');
-    str = str.replace(':question:', '?');
-    str = str.replace(':link:', 'connect');
-    str = str.replace(':x:', 'X');
+    str = str.replace(/:thumbsup:/g, '+'.green);
+    str = str.replace(/:thumbsdown:/g, '-'.red);
+    str = str.replace(/:question:/g, '?'.yellow);
+    str = str.replace(/:link:/g, 'connect'.green);
+    str = str.replace(/:x:/g, 'X'.red);
   }
   return str;
 }
