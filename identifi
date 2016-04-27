@@ -20,11 +20,11 @@ function emojify(str) {
   if (process.platform === 'darwin') {
     str = emoji.emojify(str);
   } else {
-    str = str.replace(/:thumbsup:/g, '+'.green);
-    str = str.replace(/:thumbsdown:/g, '-'.red);
-    str = str.replace(/:question:/g, '?'.yellow);
-    str = str.replace(/:link:/g, 'connect'.green);
-    str = str.replace(/:x:/g, 'X'.red);
+    str = str.replace(/:thumbsup:/g, '+'.green)
+    .replace(/:thumbsdown:/g, '-'.red)
+    .replace(/:question:/g, '?'.yellow)
+    .replace(/:link:/g, 'verify'.green)
+    .replace(/:x:/g, 'X'.red);
   }
   return str;
 }
@@ -34,17 +34,17 @@ identifi
   .usage('<identifier> [options]')
   .description('Example:\n'
     + '    identifi bob@example.com --rate 10 -m "full trust"\n'
-    + '    identifi bob@example.com --connect https://twitter.com/bob -m "same person"\n'
+    + '    identifi bob@example.com --verify https://twitter.com/bob -m "same person"\n'
     + '    identifi bob@example.com')
   .option('-t, --type <type>', 'Force set the identifier type')
-  .option('-g, --get <type>', 'Get a connected identifier of the given type')
+  .option('-g, --get <type>', 'Get a verifyed identifier of the given type')
   .option('-r, --received [ratingType]', 'Get received positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
   .option('-s, --sent [ratingType]', 'Get sent positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
   .option('--rate <rating>', 'Give a rating between -10 and 10 to the identity')
   // .option('--name [name]', 'Name an identity') reserved word by commander
-  .option('--connect <identifier>', 'Connect an identifier to the identity')
-  .option('--disconnect <identifier>', 'Disconnect an identifier from the identity')
-  .option('-m --message <message>', 'Include a comment with a rating / connection')
+  .option('--verify <identifier>', 'Connect an identifier to the identity')
+  .option('--refute <identifier>', 'Refute an identifier from the identity')
+  .option('-m --message <message>', 'Include a comment with a rating / verifyion')
   .option('--trustpath', 'Get a trust path to the identity')
   .option('--generatewot', 'Generate a Web of Trust index for an identifier')
   .option('--follow', 'Show new messages in real-time')
@@ -227,11 +227,11 @@ function runIdentifi() {
         type += ' ';
       }
 
-      if (d.type === 'confirm_connection') {
+      if (d.type === 'verify_identity') {
         type = '\u2713'.green + ' [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
         showThisRecipient = false;
       }
-      if (d.type === 'refute_connection') {
+      if (d.type === 'refute_identity') {
         type = ':x:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
         showThisRecipient = false;
       }
@@ -268,7 +268,7 @@ function runIdentifi() {
         apiMethod: 'id',
         apiIdType: idType,
         apiId: idValue,
-        apiAction: 'connections',
+        apiAction: 'verifications',
         qs: _.extend({ type: identifi.get }, queryOptions)
       }).then(function(res) {
         console.log('Related ' + identifi.get + ' for ' + idType + ':' + idValue);
@@ -360,15 +360,15 @@ function runIdentifi() {
       }).catch(showError);
     }
 
-    if (identifi.connect) {
-      if (identifi.connect.length === 0) {
+    if (identifi.verify) {
+      if (identifi.verify.length === 0) {
         return identifi.outputHelp();
       }
-      var connectedType = identifi_lib.guessTypeOf(identifi.connect) || 'name';
+      var verifiedType = identifi_lib.guessTypeOf(identifi.verify) || 'name';
       var data = {
         author: myAuthorId,
-        recipient: [[idType, idValue], [connectedType, identifi.connect]],
-        type: 'confirm_connection'
+        recipient: [[idType, idValue], [verifiedType, identifi.verify]],
+        type: 'verify_identity'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
       var m = message.create(data);
@@ -379,27 +379,27 @@ function runIdentifi() {
       }).catch(showError);
     }
 
-    if (identifi.disconnect) {
-      if (identifi.disconnect.length === 0) {
+    if (identifi.refute) {
+      if (identifi.refute.length === 0) {
         return identifi.outputHelp();
       }
-      var connectedType = identifi_lib.guessTypeOf(identifi.disconnect) || 'name';
+      var verifiedType = identifi_lib.guessTypeOf(identifi.refute) || 'name';
       var data = {
         author: myAuthorId,
-        recipient: [[idType, idValue], [connectedType, identifi.disconnect]],
-        type: 'refute_connection'
+        recipient: [[idType, idValue], [verifiedType, identifi.refute]],
+        type: 'refute_identity'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
       var m = message.create(data);
       message.sign(m, myKey.private.pem, myKey.public.hex);
       return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
-        console.log('Disconnection saved');
+        console.log('Refutation saved');
         printMessages([res]);
       }).catch(showError);
     }
 
     // identity & stats & trustpaths by default
-    api.request({ apiMethod: 'id', apiAction: 'connections', apiIdType: idType, apiId: idValue, qs: queryOptions })
+    api.request({ apiMethod: 'id', apiAction: 'verifications', apiIdType: idType, apiId: idValue, qs: queryOptions })
     .then(function(res) {
       console.log(idType + ': ' + idValue);
       if (identifi.raw) {
