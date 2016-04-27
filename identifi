@@ -16,6 +16,19 @@ var _ = require('lodash');
 
 var config = require('./config/default.json');
 
+function emojify(str) {
+  if (process.platform === 'darwin') {
+    str = emoji.emojify(str);
+  } else {
+    str.replace(':thumbsup:', '+');
+    str.replace(':thumbsdown:', '-');
+    str.replace(':question:', '?');
+    str.replace(':link:', 'connect');
+    str.replace(':x:', 'X');
+  }
+  return str;
+}
+
 identifi
   .version(packageJson.version)
   .usage('<identifier> [options]')
@@ -163,7 +176,7 @@ function runIdentifi() {
         }
       }
       console.log('Trust path:')
-      console.log(emoji.emojify(tp));
+      console.log(emojify(tp));
     }
   }
 
@@ -245,7 +258,7 @@ function runIdentifi() {
 
       str = str + moment(d.timestamp).calendar().gray + ' ';
 
-      console.log(emoji.emojify(str));
+      console.log(emojify(str));
     }
   }
 
@@ -413,8 +426,8 @@ function runIdentifi() {
         }
         var s = res[0];
         try {
-          console.log(emoji.emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
-          console.log(emoji.emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
+          console.log(emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
+          console.log(emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
           console.log('First seen: ' + moment(s.firstSeen).calendar());
           console.log();
         } catch (err) {
