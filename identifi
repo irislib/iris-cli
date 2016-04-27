@@ -17,7 +17,7 @@ var _ = require('lodash');
 var config = require('./config/default.json');
 
 function emojify(str) {
-  if (process.platform !== 'darwin') {
+  if (process.platform === 'darwin') {
     str = emoji.emojify(str);
   } else {
     str = str.replace(/:thumbsup:/g, '+'.green);
