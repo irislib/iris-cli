@@ -4,8 +4,6 @@ Command line interface for Identifi. Can talk to a local or a remote Identifi no
 
 https://www.npmjs.com/package/identifi-cli
 
-![](http://mmalmi.github.io/illusions/construction.gif)
-
 ## Install
 
 ```sh
