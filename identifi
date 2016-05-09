@@ -108,7 +108,7 @@ function runIdentifi() {
   }
 
   var queryOptions = {
-    viewpoint_type: identifi.viewpointType,
+    viewpoint_name: identifi.viewpointType,
     viewpoint_value: identifi.viewpointValue,
     max_distance: identifi.maxDistance,
     limit: identifi.limit || 20,
@@ -265,11 +265,11 @@ function runIdentifi() {
   function runCommand() {
     if (identifi.get) {
       return api.request({
-        apiMethod: 'id',
+        apiMethod: 'identities',
         apiIdType: idType,
         apiId: idValue,
         apiAction: 'verifications',
-        qs: _.extend({ type: identifi.get }, queryOptions)
+        qs: _.extend({ attr_name: identifi.get }, queryOptions)
       }).then(function(res) {
         console.log('Related ' + identifi.get + ' for ' + idType + ':' + idValue);
         if (res.length === 0) {
@@ -288,7 +288,7 @@ function runIdentifi() {
         qs.type = 'rating:' + identifi.received;
       }
       return api.request({
-        apiMethod: 'id',
+        apiMethod: 'identities',
         apiIdType: idType,
         apiId: idValue,
         apiAction: 'received',
@@ -305,7 +305,7 @@ function runIdentifi() {
         qs.type = 'rating:' + identifi.sent;
       }
       return api.request({
-        apiMethod: 'id',
+        apiMethod: 'identities',
         apiIdType: idType,
         apiId: idValue,
         apiAction: 'sent',
@@ -318,11 +318,11 @@ function runIdentifi() {
 
     if (identifi.trustpath) {
       return api.request({
-        apiMethod: 'id',
+        apiMethod: 'identities',
         apiIdType: myIdType,
         apiId: myIdValue,
         apiAction: 'trustpaths',
-        qs: { target_type: idType, target_value: idValue }
+        qs: { target_name: idType, target_value: idValue }
       }).then(function(res) {
         printTrustpaths(res);
       }).catch(showError);
@@ -330,7 +330,7 @@ function runIdentifi() {
 
     if (identifi.generatewot) {
       return api.request({
-        apiMethod: 'id',
+        apiMethod: 'identities',
         apiIdType: myIdType,
         apiId: myIdValue,
         apiAction: 'generatewotindex',
@@ -399,7 +399,7 @@ function runIdentifi() {
     }
 
     // identity & stats & trustpaths by default
-    api.request({ apiMethod: 'id', apiAction: 'verifications', apiIdType: idType, apiId: idValue, qs: queryOptions })
+    api.request({ apiMethod: 'identities', apiAction: 'verifications', apiIdType: idType, apiId: idValue, qs: queryOptions })
     .then(function(res) {
       console.log(idType + ': ' + idValue);
       if (identifi.raw) {
@@ -407,7 +407,7 @@ function runIdentifi() {
       }
       try {
         for (var i = 0; i < res.length; i++) {
-          var str = res[i].type.gray + ' ' + res[i].value + ' ';
+          var str = res[i].name.gray + ' ' + res[i].value + ' ';
           str += ('\u2713 ' + res[i].confirmations + ' ').green;
           if (res[i].refutations > 0) {
             str += ('\u274C  ' + res[i].refutations + ' ').red;
@@ -419,7 +419,7 @@ function runIdentifi() {
         console.log(res);
       }
 
-      api.request({ apiMethod: 'id', apiIdType: idType, apiId: idValue, apiAction: 'stats', qs: queryOptions })
+      api.request({ apiMethod: 'identities', apiIdType: idType, apiId: idValue, apiAction: 'stats', qs: queryOptions })
       .then(function(res) {
         if (identifi.raw) {
           return console.log(res);
@@ -437,11 +437,11 @@ function runIdentifi() {
 
       if (idType != myIdType || idValue != myIdValue) {
         return api.request({
-          apiMethod: 'id',
+          apiMethod: 'identities',
           apiIdType: myIdType,
           apiId: myIdValue,
           apiAction: 'trustpaths',
-          qs: { target_type: idType, target_value: idValue }
+          qs: { target_name: idType, target_value: idValue }
         })
         .then(function(res) {
           var s = res[0];
