@@ -43,7 +43,7 @@ identifi
   .option('--rate <rating>', 'Give a rating between -10 and 10 to the identity')
   // .option('--name [name]', 'Name an identity') reserved word by commander
   .option('--verify <identifier>', 'Connect an identifier to the identity')
-  .option('--refute <identifier>', 'Refute an identifier from the identity')
+  .option('--unverify <identifier>', 'unverify an identifier from the identity')
   .option('-m --message <message>', 'Include a comment with a rating / verifyion')
   .option('--trustpath', 'Get a trust path to the identity')
   .option('--generatewot', 'Generate a Web of Trust index for an identifier')
@@ -231,7 +231,7 @@ function runIdentifi() {
         type = '\u2713'.green + ' [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
         showThisRecipient = false;
       }
-      if (d.type === 'refute_identity') {
+      if (d.type === 'unverify_identity') {
         type = ':x:  [' + d.recipient[0][0] + ':' + d.recipient[0][1] + ' :link:  ' + d.recipient[1][0] + ':' + d.recipient[1][1] + '] ';
         showThisRecipient = false;
       }
@@ -379,15 +379,15 @@ function runIdentifi() {
       }).catch(showError);
     }
 
-    if (identifi.refute) {
-      if (identifi.refute.length === 0) {
+    if (identifi.unverify) {
+      if (identifi.unverify.length === 0) {
         return identifi.outputHelp();
       }
-      var verifiedType = identifi_lib.guessTypeOf(identifi.refute) || 'name';
+      var verifiedType = identifi_lib.guessTypeOf(identifi.unverify) || 'name';
       var data = {
         author: myAuthorId,
-        recipient: [[idType, idValue], [verifiedType, identifi.refute]],
-        type: 'refute_identity'
+        recipient: [[idType, idValue], [verifiedType, identifi.unverify]],
+        type: 'unverify_identity'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
       var m = message.create(data);
