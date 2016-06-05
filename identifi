@@ -38,13 +38,14 @@ identifi
     + '    identifi bob@example.com')
   .option('-t, --type <type>', 'Force set the identifier type')
   .option('-g, --get <type>', 'Get a verifyed identifier of the given type')
-  .option('-r, --received [ratingType]', 'Get received positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
-  .option('-s, --sent [ratingType]', 'Get sent positive/neutral/negative/all messages', /^(positive|neutral|negative)$/i)
+  .option('-r, --received [ratingType]', 'Get received positive | neutral | negative | (all) messages', /^(positive|neutral|negative)$/i)
+  .option('-s, --sent [ratingType]', 'Get sent positive | neutral | negative | (all) messages', /^(positive|neutral|negative)$/i)
   .option('--rate <rating>', 'Give a rating between -10 and 10 to the identity')
   // .option('--name [name]', 'Name an identity') reserved word by commander
   .option('--verify <identifier>', 'Connect an identifier to the identity')
   .option('--unverify <identifier>', 'unverify an identifier from the identity')
-  .option('-m --message <message>', 'Include a comment with a rating / verifyion')
+  .option('-m --message <message>', 'Include a comment with a rating / verification')
+  .option('--visibility', 'Message visibility: public | private | attribute:value', /^(public|private|(\S:\S))$/i)
   .option('--trustpath', 'Get a trust path to the identity')
   .option('--generatewot', 'Generate a Web of Trust index for an identifier')
   .option('--follow', 'Show new messages in real-time')
@@ -331,11 +332,13 @@ function runIdentifi() {
     if (identifi.generatewot) {
       return api.request({
         apiMethod: 'identities',
-        apiIdType: myIdType,
-        apiId: myIdValue,
+        apiIdType: 'keyID',
+        apiId: myKey.hash,
         apiAction: 'generatewotindex',
-        qs: { depth: 3 }
-        // TODO: auth
+        qs: { depth: 2 },
+        headers: {
+          'Authorization': 'Bearer ' + api.getJwt(myKey.private.pem)
+        }
       }).then(function(res) {
         console.log(res);
       }).catch(showError);
