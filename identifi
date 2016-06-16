@@ -337,7 +337,7 @@ function runIdentifi() {
         apiAction: 'generatewotindex',
         qs: { depth: 2 },
         headers: {
-          'Authorization': 'Bearer ' + api.getJwt(myKey.private.pem)
+          'Authorization': 'Bearer ' + api.getJwt(myKey.private.pem, { admin: true })
         }
       }).then(function(res) {
         console.log(res);
@@ -429,8 +429,8 @@ function runIdentifi() {
         }
         var s = res[0];
         try {
-          console.log(emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sentPositive) + '    :question: ' + colors.yellow(s.sentNeutral) + '    :thumbsdown:  ' + colors.red(s.sentNegative)));
-          console.log(emojify('Received: ' + ':thumbsup:  ' + colors.green(s.receivedPositive) + '    :question: ' + colors.yellow(s.receivedNeutral) + '    :thumbsdown:  ' + colors.red(s.receivedNegative)));
+          console.log(emojify('Sent:     ' + ':thumbsup:  ' + colors.green(s.sent_positive) + '    :question: ' + colors.yellow(s.sent_neutral) + '    :thumbsdown:  ' + colors.red(s.sent_negative)));
+          console.log(emojify('Received: ' + ':thumbsup:  ' + colors.green(s.received_positive) + '    :question: ' + colors.yellow(s.received_neutral) + '    :thumbsdown:  ' + colors.red(s.received_negative)));
           console.log('First seen: ' + moment(s.firstSeen).calendar());
           console.log();
         } catch (err) {
