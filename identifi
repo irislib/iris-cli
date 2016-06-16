@@ -15,6 +15,7 @@ var inquirer = require('inquirer');
 var _ = require('lodash');
 
 var config = require('./config/default.json');
+var datadir = process.env.IDENTIFI_DATADIR || (osHomedir() + '/.identifi');
 
 function emojify(str) {
   if (process.platform === 'darwin') {
@@ -32,10 +33,10 @@ function emojify(str) {
 identifi
   .version(packageJson.version)
   .usage('<identifier> [options]')
-  .description('Example:\n'
-    + '    identifi bob@example.com --rate 10 -m "full trust"\n'
-    + '    identifi bob@example.com --verify https://twitter.com/bob -m "same person"\n'
-    + '    identifi bob@example.com')
+  .description('Example:\n' +
+    '    identifi bob@example.com --rate 10 -m "full trust"\n' +
+    '    identifi bob@example.com --verify https://twitter.com/bob -m "same person"\n' +
+    '    identifi bob@example.com')
   .option('-t, --type <type>', 'Force set the identifier type')
   .option('-g, --get <type>', 'Get a verifyed identifier of the given type')
   .option('-r, --received [ratingType]', 'Get received positive | neutral | negative | (all) messages', /^(positive|neutral|negative)$/i)
@@ -58,47 +59,6 @@ identifi
   .option('-d, --max-distance <distance>', 'Maximum trust distance from viewpoint', parseInt)
   .option('-l, --limit <limit>', 'Limit the amount of results', parseInt)
   .option('-o, --offset <offset>', 'Offset of results list', parseInt);
-
-// Extend default config from datadir/config.json and write the result back to it
-var datadir = process.env.IDENTIFI_DATADIR || (osHomedir() + '/.identifi');
-(function setConfigAndRun() {
-  if (!fs.existsSync(datadir)) {
-    fs.mkdirSync(datadir);
-  }
-  var cfgFile = datadir + '/config.json';
-  if (fs.existsSync(cfgFile)) {
-    var cfgFromFile = require(cfgFile);
-    Object.assign(config, cfgFromFile);
-  }
-
-  if (!config.userName || !config.userEmail) {
-    console.log('Welcome to use identifi!');
-    inquirer.prompt([
-      { type: 'input', name: 'name', message: 'Please enter your name (public)' },
-      { type: 'input',
-        name: 'email',
-        message: 'Please enter your email address (public)',
-        validate: function (value) {
-          var pass = value.match(identifi_lib.UNIQUE_ID_VALIDATORS.email);
-          if (pass) {
-            return true;
-          }
-
-          return 'Please enter a valid email address';
-        }
-      }
-    ])
-    .then(function(answers) {
-      config.userName = answers.name;
-      config.userEmail = answers.email;
-      fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
-      runIdentifi();
-    });
-  } else {
-    fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
-    runIdentifi();
-  }
-})();
 
 function runIdentifi() {
   identifi.parse(process.argv);
@@ -136,7 +96,6 @@ function runIdentifi() {
     idType = myIdType;
     idValue = myIdValue;
   }
-  var identifier = [idType, idValue];
 
   function showError(error) {
     console.log('Identifi request failed: ');
@@ -159,7 +118,7 @@ function runIdentifi() {
       return console.log(res);
     }
     if (res.length === 0) {
-      return console.log('No trust path to ' + idType + ':' + idValue + ' found')
+      return console.log('No trust path to ' + idType + ':' + idValue + ' found');
     }
     // Format a trustpath string
     for (var i = 0; i < res.length; i++) {
@@ -176,7 +135,7 @@ function runIdentifi() {
           }
         }
       }
-      console.log('Trust path:')
+      console.log('Trust path:');
       console.log(emojify(tp));
     }
   }
@@ -264,6 +223,7 @@ function runIdentifi() {
   }
 
   function runCommand() {
+    var qs, data, m, verifiedType;
     if (identifi.get) {
       return api.request({
         apiMethod: 'identities',
@@ -284,7 +244,7 @@ function runIdentifi() {
     }
 
     if (identifi.received) {
-      var qs = _.clone(queryOptions);
+      qs = _.clone(queryOptions);
       if (identifi.received.length > 0 && identifi.received !== 'all') {
         qs.type = 'rating:' + identifi.received;
       }
@@ -301,7 +261,7 @@ function runIdentifi() {
     }
 
     if (identifi.sent) {
-      var qs = _.clone(queryOptions);
+      qs = _.clone(queryOptions);
       if (identifi.sent.length > 0 && identifi.sent !== 'all') {
         qs.type = 'rating:' + identifi.sent;
       }
@@ -345,17 +305,17 @@ function runIdentifi() {
     }
 
     if (identifi.rate) {
-      if (parseInt(identifi.rate) === NaN) {
+      if (isNaN(parseInt(identifi.rate))) {
         return identifi.outputHelp();
       }
-      var data = {
+      data = {
         author: myAuthorId,
         recipient: [[idType, idValue]],
         rating: identifi.rate,
         context: 'identifi'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
-      var m = message.createRating(data);
+      m = message.createRating(data);
       message.sign(m, myKey.private.pem, myKey.public.hex);
       return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
         console.log('Rating saved');
@@ -367,14 +327,14 @@ function runIdentifi() {
       if (identifi.verify.length === 0) {
         return identifi.outputHelp();
       }
-      var verifiedType = identifi_lib.guessTypeOf(identifi.verify) || 'name';
-      var data = {
+      verifiedType = identifi_lib.guessTypeOf(identifi.verify) || 'name';
+      data = {
         author: myAuthorId,
         recipient: [[idType, idValue], [verifiedType, identifi.verify]],
         type: 'verify_identity'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
-      var m = message.create(data);
+      m = message.create(data);
       message.sign(m, myKey.private.pem, myKey.public.hex);
       return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
         console.log('Connection saved');
@@ -386,14 +346,14 @@ function runIdentifi() {
       if (identifi.unverify.length === 0) {
         return identifi.outputHelp();
       }
-      var verifiedType = identifi_lib.guessTypeOf(identifi.unverify) || 'name';
-      var data = {
+      verifiedType = identifi_lib.guessTypeOf(identifi.unverify) || 'name';
+      data = {
         author: myAuthorId,
         recipient: [[idType, idValue], [verifiedType, identifi.unverify]],
         type: 'unverify_identity'
       };
       if (identifi.message) { data['comment'] = identifi.message; }
-      var m = message.create(data);
+      m = message.create(data);
       message.sign(m, myKey.private.pem, myKey.public.hex);
       return api.request({ method: 'POST', apiMethod: 'messages', body: m }).then(function(res) {
         console.log('Refutation saved');
@@ -438,7 +398,7 @@ function runIdentifi() {
         }
       }).catch(showError);
 
-      if (idType != myIdType || idValue != myIdValue) {
+      if (idType !== myIdType || idValue !== myIdValue) {
         return api.request({
           apiMethod: 'identities',
           apiIdType: myIdType,
@@ -447,7 +407,6 @@ function runIdentifi() {
           qs: { target_name: idType, target_value: idValue }
         })
         .then(function(res) {
-          var s = res[0];
           try {
             printTrustpaths(res);
             console.log();
@@ -463,10 +422,10 @@ function runIdentifi() {
     return api.request({ }).then(function(res) {
       console.log(res);
     }).catch(showError);
-  };
+  }
 
   if (identifi.follow) {
-    console.log('Listening to new messages from identifi node')
+    console.log('Listening to new messages from identifi node');
     var socket = api.getSocket();
     socket.on('msg', function(data) {
       var m;
@@ -485,5 +444,45 @@ function runIdentifi() {
     }
   }
 }
+
+// Extend default config from datadir/config.json and write the result back to it
+(function setConfigAndRun() {
+  if (!fs.existsSync(datadir)) {
+    fs.mkdirSync(datadir);
+  }
+  var cfgFile = datadir + '/config.json';
+  if (fs.existsSync(cfgFile)) {
+    var cfgFromFile = require(cfgFile);
+    Object.assign(config, cfgFromFile);
+  }
+
+  if (!config.userName || !config.userEmail) {
+    console.log('Welcome to use identifi!');
+    inquirer.prompt([
+      { type: 'input', name: 'name', message: 'Please enter your name (public)' },
+      { type: 'input',
+        name: 'email',
+        message: 'Please enter your email address (public)',
+        validate: function (value) {
+          var pass = value.match(identifi_lib.UNIQUE_ID_VALIDATORS.email);
+          if (pass) {
+            return true;
+          }
+
+          return 'Please enter a valid email address';
+        }
+      }
+    ])
+    .then(function(answers) {
+      config.userName = answers.name;
+      config.userEmail = answers.email;
+      fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
+      runIdentifi();
+    });
+  } else {
+    fs.writeFileSync(cfgFile, JSON.stringify(config, null, 4), 'utf8');
+    runIdentifi();
+  }
+})();
 
 module.exports = identifi;
