@@ -48,7 +48,7 @@ identifi
   .option('-m --message <message>', 'Include a comment with a rating / verification')
   .option('--visibility', 'Message visibility: public | private | attribute:value', /^(public|private|(\S:\S))$/i)
   .option('--trustpath', 'Get a trust path to the identity')
-  .option('--generatewot', 'Generate a Web of Trust index for an identifier')
+  .option('--generatewot [depth]', 'Generate a Web of Trust index for an identifier')
   .option('--follow', 'Show new messages in real-time')
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
@@ -290,12 +290,15 @@ function runIdentifi() {
     }
 
     if (identifi.generatewot) {
+      var depth = parseInt(identifi.generatewot);
+      if (isNaN(depth)) { depth = 3; }
+      console.log(depth);
       return api.request({
         apiMethod: 'identities',
         apiIdType: 'keyID',
         apiId: myKey.hash,
         apiAction: 'generatewotindex',
-        qs: { depth: 2 },
+        qs: { depth: depth },
         headers: {
           'Authorization': 'Bearer ' + api.getJwt(myKey.private.pem, { admin: true })
         }
