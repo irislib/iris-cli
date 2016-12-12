@@ -292,7 +292,6 @@ function runIdentifi() {
     if (identifi.generatewot) {
       var depth = parseInt(identifi.generatewot);
       if (isNaN(depth)) { depth = 3; }
-      console.log(depth);
       return api.request({
         apiMethod: 'identities',
         apiIdType: 'keyID',
