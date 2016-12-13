@@ -49,6 +49,7 @@ identifi
   .option('--visibility', 'Message visibility: public | private | attribute:value', /^(public|private|(\S:\S))$/i)
   .option('--trustpath', 'Get a trust path to the identity')
   .option('--generatewot [depth]', 'Generate a Web of Trust index for an identifier')
+  .option('--reindex', 'Add local-only messages to ipfs')
   .option('--follow', 'Show new messages in real-time')
   .option('--status', 'Get node status')
   .option('--me', 'Overview of your own identity')
@@ -298,6 +299,17 @@ function runIdentifi() {
         apiId: myKey.hash,
         apiAction: 'generatewotindex',
         qs: { depth: depth },
+        headers: {
+          'Authorization': 'Bearer ' + api.getJwt(myKey.private.pem, { admin: true })
+        }
+      }).then(function(res) {
+        console.log(res);
+      }).catch(showError);
+    }
+
+    if (identifi.reindex) {
+      return api.request({
+        apiMethod: 'reindex',
         headers: {
           'Authorization': 'Bearer ' + api.getJwt(myKey.private.pem, { admin: true })
         }
