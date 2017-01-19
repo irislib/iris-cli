@@ -8,7 +8,10 @@
     "email": "sirius@iki.fi",
     "url": "https://github.com/mmalmi"
   },
-  "repository": "identifi/identifi-cli",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/identifi/identifi-cli.git"
+  },
   "license": "MIT",
   "main": "identifi",
   "files": [
@@ -52,5 +55,11 @@
   "bin": {
     "identifi": "identifi"
   },
-  "preferGlobal": true
+  "preferGlobal": true,
+  "bugs": {
+    "url": "https://github.com/identifi/identifi-cli/issues"
+  },
+  "directories": {
+    "test": "test"
+  }
 }
