@@ -1,3 +1,5 @@
+# Needs update to latest identifi-lib features - you will probably not need this as of August 2018
+
 #  [![Build Status](https://secure.travis-ci.org/identifi/identifi-cli.png?branch=master)](http://travis-ci.org/identifi/identifi-cli)
 
 Command line interface for Identifi. Can talk to a local or a remote Identifi node.
